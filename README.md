@@ -1135,3 +1135,33 @@ ReportFactory
 
 **Justificación:** Sin Template Method, cada tipo de reporte tendría que reimplementar el flujo completo de 4 pasos, duplicando la lógica de obtención y procesamiento de datos (que es idéntica en los tres formatos) y arriesgando que alguien cambie el orden de los pasos por error. Sin Factory Method, el cliente necesitaría un `if/else` o `switch` para decidir qué clase concreta instanciar cada vez que pide un reporte. Combinados, el esqueleto del algoritmo queda protegido (es `final`, no se puede sobreescribir el orden), solo varían los pasos que realmente cambian entre formatos, y agregar un nuevo tipo de reporte (por ejemplo JSON) solo requiere una nueva subclase y un caso más en la Factory — sin tocar el resto del sistema.
 
+### Ejercicio 04 — Plataforma de Videojuegos — Personajes
+
+**Caso:** Un videojuego crea guerreros, magos y arqueros. Cada personaje puede tener habilidades especiales, armadura, arma y mejoras temporales (escudo de hielo, velocidad extra, invisibilidad). El personaje se construye al inicio de la partida, pero sus poderes pueden aumentar dinámicamente durante el juego.
+
+**Patrones combinados:** Builder + Decorator
+
+**Rol de cada patrón:**
+- *Builder* (`WarriorBuilder`) construye el personaje paso a paso al inicio de la partida (`setArmor()`, `setWeapon()`, `setSkill()`, `build()`), evitando un constructor con muchos parámetros. `CharacterDirector` permite construir arquetipos predefinidos como "guerrero élite".
+- *Decorator* (`ShieldDecorator`, `SpeedDecorator`, `InvisibilityDecorator`) agrega poderes temporales dinámicamente durante la partida, envolviendo el personaje sin modificar su clase base.
+
+**Cómo interactúan:** `WarriorBuilder` crea el personaje base configurable (`BaseCharacter`, implementando la interfaz `Character`). Durante la partida, cada poder temporal se aplica envolviendo el personaje con un Decorator (`new ShieldDecorator(new SpeedDecorator(guerrero))`). Cada Decorator, al ejecutar `attack()`, primero delega la llamada al objeto que envuelve y luego suma su propio bono de poder al resultado — así los efectos se acumulan sin que el personaje base sepa que están activos.
+
+**Esquema de clases:**
+
+Character (interfaz) → getNombre(), attack()
+ * BaseCharacter → personaje base construido por el Builder 
+ * CharacterDecorator (abstracta, envuelve un Character)
+ * ShieldDecorator → +5 al poder de ataque 
+ * SpeedDecorator → +3 al poder de ataque 
+ * InvisibilityDecorator → +7 al poder de ataque
+
+* WarriorBuilder → setArmor / setWeapon / setSkill / build()
+* CharacterDirector → arquetipos predefinidos (guerreroElite)
+
+
+**Código implementado:** ver `Ejercicio4.java`, `Character.java`, `BaseCharacter.java`, `WarriorBuilder.java`, `CharacterDirector.java`, `CharacterDecorator.java`, `ShieldDecorator.java`, `SpeedDecorator.java`, `InvisibilityDecorator.java` en `src/main/dosw/semana_4/patrones/ejercicio4/`.
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio4.png)
+
+**Justificación:** Sin Decorator, cada combinación de poderes activos requeriría una subclase distinta — con 5 poderes posibles combinables, eso significa hasta 2⁵ = 32 subclases para cubrir todas las combinaciones. Con Decorator, solo se necesitan 5 wrappers + 1 clase base = 6 clases en total, y se pueden apilar en cualquier orden y cantidad en tiempo de ejecución. Sin Builder, construir un personaje con varios atributos configurables requeriría un constructor con muchos parámetros posicionales (propenso a errores) en vez de una API fluida y legible. Juntos, Builder resuelve "cómo se arma el personaje al inicio" y Decorator resuelve "cómo se potencia durante el juego" — son momentos distintos del ciclo de vida del personaje, y por eso no compiten entre sí.
