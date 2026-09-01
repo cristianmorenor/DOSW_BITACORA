@@ -177,3 +177,50 @@ public class Ejercicio5 {
 **Captura de ejecución:** ![](evidencias/ejercicio5.png)
 
 **Explicación:** Se usó `peek()` para imprimir cada transacción a medida que se procesa, y `anyMatch()` para verificar si existe al menos una no aprobada. Como `anyMatch()` hace corto circuito, deja de evaluar transacciones apenas encuentra una que cumple la condición (por eso T4 no se llegó a procesar). El lote se considera válido solo si no hay ninguna no aprobada.
+
+
+# SEMANA No 2 — Bitácora Pokémon
+
+## Datos de Entrenador: 
+- Nombre y Apellido: Cristian Moreno
+- Código de Estudiante: 1000100162
+- Curso: DOSW 
+
+### Ejercicio 01 — Pokémon Tipo Fuego
+
+Dada una lista de Pokémon con nombre y tipo, obtener únicamente aquellos cuyo tipo sea Fuego.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio1 {
+
+    record Pokemon(String nombre, String tipo) {}
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon("Pikachu", "Eléctrico"),
+                new Pokemon("Charmander", "Fuego"),
+                new Pokemon("Squirtle", "Agua"),
+                new Pokemon("Vulpix", "Fuego"),
+                new Pokemon("Bulbasaur", "Planta"),
+                new Pokemon("Flareon", "Fuego")
+        );
+
+        List<String> tipoFuego = pokemones.stream()
+                .filter(p -> p.tipo().equals("Fuego"))
+                .map(Pokemon::nombre)
+                .collect(Collectors.toList());
+
+        System.out.println(tipoFuego);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio1.png)
+
+**Explicación:** Se usó `filter()` con una lambda para quedarnos solo con los Pokémon de tipo Fuego, y `map()` con method reference (`Pokemon::nombre`) para extraer únicamente sus nombres.
