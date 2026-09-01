@@ -1021,3 +1021,370 @@ public class Ejercicio20 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio20.png)
 
 **Explicación:** Este ejercicio de cierre combina prácticamente todos los operadores vistos en el taller. Se usó `groupingBy()` con `Collectors.counting()` (en vez del `Collectors.mapping()` de los ejercicios 13 y 14) porque aquí solo interesa *cuántos* Pokémon hay por grupo, no sus nombres — `counting()` es un recolector downstream que simplemente cuenta los elementos de cada grupo en vez de coleccionarlos. Para los legendarios se usó `filter()` con method reference (`Pokemon::isLegendario`) seguido de `count()`, ya que es un total simple sin necesidad de agrupar. El promedio de nivel reutiliza el patrón de `mapToInt()` + `average()` visto en el Ejercicio 11. Finalmente, para el Pokémon más fuerte se usó `max()` con `Comparator.comparingDouble()`, igual que en ejercicios anteriores, y se aprovechó el `ifPresent()` de ese resultado para imprimir todo el reporte junto, evitando declarar variables sueltas fuera de los streams.
+
+---
+
+# TALLER DOSW #4 — Patrones de Diseño Combinados
+
+## Datos personales:
+- Nombre y Apellido Cristian Santiago Moreno
+- Código de Estudiante: 1000100162
+- Curso: DOSW
+
+---
+
+### Ejercicio 01 — Plataforma de Pagos Inteligentes
+
+**Caso:** Una aplicación de e-commerce permite pagar con tarjeta, PSE, Nequi, PayPal y transferencia bancaria. Cada medio tiene una lógica distinta pero el flujo de compra es el mismo. Además, según el país del usuario, el sistema construye el proveedor de pago correcto.
+
+**Patrones combinados:** Strategy + Factory Method
+
+**Rol de cada patrón:**
+- *Strategy* encapsula cada algoritmo de pago en una clase independiente (`TarjetaStrategy`, `PseStrategy`, `NequiStrategy`, `PaypalStrategy`, `StripeStrategy`), todas implementando la interfaz `PaymentStrategy`. Esto permite que `Checkout` use cualquier medio de pago sin conocer su implementación interna.
+- *Factory Method* decide qué proveedor de pago construir según el país del usuario. `ColombiaPaymentFactory` solo sabe construir PSE, Nequi y Tarjeta; `UsaPaymentFactory` solo sabe construir PayPal, Stripe y Tarjeta.
+
+**Cómo interactúan:** El cliente (`Checkout`) recibe una `PaymentFactory` según el país del usuario. Cuando se necesita procesar un pago, `Checkout` le pide a la Factory que construya la `PaymentStrategy` correspondiente al medio elegido, y luego simplemente llama `strategy.process(amount)` sin saber qué clase concreta se instanció. La Factory decide *qué* Strategy instanciar; el Checkout nunca cambia.
+
+**Esquema de clases:**
+
+PaymentStrategy (interfaz)
+
+ * TarjetaStrategy 
+ * PseStrategy 
+ * NequiStrategy 
+ * PaypalStrategy 
+ * StripeStrategy
+
+PaymentFactory (interfaz)
+* ColombiaPaymentFactory, crea PSE / Nequi / Tarjeta
+* UsaPaymentFactory, crea PayPal / Stripe / Tarjeta
+
+Checkout
+* usa PaymentFactory para obtener una PaymentStrategy y ejecutarla
+
+
+**Código implementado:** ver `Ejercicio1.java`, `Checkout.java`, `PaymentStrategy.java`, `TarjetaStrategy.java`, `PseStrategy.java`, `NequiStrategy.java`, `PaypalStrategy.java`, `StripeStrategy.java`, `PaymentFactory.java`, `ColombiaPaymentFactory.java`, `UsaPaymentFactory.java` en `src/main/dosw/semana_4/patrones/`.
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio1.png)
+
+**Justificación:** Sin esta combinación, `Checkout` tendría que conocer directamente todas las clases concretas de pago y decidir con `if/else` o `switch` según el país cuál instanciar — mezclando la lógica de "qué país es" con la de "cómo se procesa cada pago". Separando estas dos responsabilidades con Strategy (el algoritmo de pago) y Factory Method (la construcción según contexto), se puede agregar un nuevo medio de pago o un nuevo país sin modificar `Checkout` en absoluto, cumpliendo el principio Open/Closed.
+
+### Ejercicio 02 — Sistema de Notificaciones Multicanal
+
+**Caso:** Cuando un pedido cambia de estado (pendiente → enviado → entregado), el sistema notifica por correo, SMS, WhatsApp y push. No todos los usuarios tienen activos los mismos canales. Cada canal tiene su propia forma de construir y formatear el mensaje.
+
+**Patrones combinados:** Observer + Factory Method
+
+**Rol de cada patrón:**
+- *Observer* desacopla el `Pedido` (el Subject) de sus canales de notificación. `EmailNotifier`, `SmsNotifier` y `PushNotifier` son Observers que se suscriben al pedido. Agregar un canal nuevo no requiere modificar la clase `Pedido`.
+- *Factory Method* crea el mensaje correcto para cada canal: `EmailMessageFactory` genera HTML, `SmsMessageFactory` genera texto plano (recortado a 160 caracteres), `PushMessageFactory` genera un payload JSON.
+
+**Cómo interactúan:** Cuando `Pedido` cambia de estado, notifica a todos sus Observers activos llamando a `notify(event)`. Cada Observer, al recibir el evento, usa su propia `MessageFactory` internamente para construir el mensaje con el formato adecuado a su canal, y luego lo envía. El `Pedido` nunca sabe cómo se construye o envía cada mensaje — solo avisa que algo cambió.
+
+**Esquema de clases:**
+
+NotificationObserver (interfaz)
+* EmailNotifier usa EmailMessageFactory 
+* SmsNotifier usa SmsMessageFactory 
+* PushNotifier  usa PushMessageFactory
+
+MessageFactory (interfaz)
+* EmailMessageFactory construye Message en HTML 
+* SmsMessageFactory  construye Message en texto plano (máx 160 chars)
+* PushMessageFactory construye Message en JSON
+
+Pedido (Subject)
+* mantiene lista de NotificationObserver y los notifica al cambiar de estado
+
+
+**Código implementado:** ver `Ejercicio2.java`, `Pedido.java`, `OrderEvent.java`, `Message.java`, `NotificationObserver.java`, `EmailNotifier.java`, `SmsNotifier.java`, `PushNotifier.java`, `MessageFactory.java`, `EmailMessageFactory.java`, `SmsMessageFactory.java`, `PushMessageFactory.java` en `src/main/dosw/semana_4/patrones/ejercicio2/`.
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio2.png)
+
+**Justificación:** Sin Observer, el `Pedido` tendría que conocer explícitamente cada canal y llamarlos uno por uno con lógica condicional según qué canales tiene activo el usuario — un cambio de acoplamiento fuerte. Sin Factory Method, cada Notifier tendría que construir su propio mensaje con lógica de formateo dispersa y duplicada dentro de sí mismo. Separando ambas responsabilidades, agregar un nuevo canal (por ejemplo WhatsApp) solo implica crear un `WhatsappNotifier` + `WhatsappMessageFactory` y suscribirlo al pedido — sin tocar ninguna clase existente.
+
+### Ejercicio 03 — Sistema de Reportes Empresariales
+
+**Caso:** La empresa genera reportes en PDF, Excel y CSV. Todos siguen los mismos 4 pasos: obtener datos → procesar información → aplicar formato → exportar archivo. Pero cada formato implementa "aplicar formato" y "exportar" de forma diferente. Además, el sistema decide dinámicamente qué tipo de reporte crear.
+
+**Patrones combinados:** Template Method + Factory Method
+
+**Rol de cada patrón:**
+- Template Method define en `ReportGenerator` el método final `generate()`, que ejecuta siempre en el mismo orden los 4 pasos: `fetchData()`, `processData()` (comunes a todos los reportes, implementados en la clase base) y `applyFormat()`, `exportFile()` (abstractos, cada subclase decide cómo hacerlos).
+- Factory Method (`ReportFactory`) crea la instancia correcta según el tipo de reporte solicitado (`"PDF"`, `"EXCEL"`, `"CSV"`), sin que el cliente tenga que instanciar `PdfReport`, `ExcelReport` o `CsvReport` directamente.
+
+**Cómo interactúan:** El cliente pide un tipo de reporte a `ReportFactory`, que construye la subclase de `ReportGenerator` correspondiente. El cliente llama `generate()` sobre ese objeto, y el Template Method ejecuta los 4 pasos en orden: obtiene datos crudos, los procesa (transformándolos a mayúsculas, lógica compartida por todos), y delega los dos últimos pasos a la implementación específica de cada subclase, que toma esos mismos datos procesados y los formatea de manera distinta (HTML para PDF, separado por comas para CSV, separado por `|` para Excel) antes de "exportarlos".
+
+**Esquema de clases:**
+
+ReportGenerator (clase abstracta)
+* generate() → método final (Template Method): fetchData → processData → applyFormat → exportFile 
+* fetchData() / processData() → implementados en la base, compartidos 
+* applyFormat() / exportFile() → abstractos 
+* PdfReport → formatea en HTML 
+* ExcelReport → formatea separado por "|"
+* CsvReport → formatea separado por ","
+
+ReportFactory
+* create(tipo) → PdfReport | ExcelReport | CsvReport
+
+
+**Código implementado:** ver `Ejercicio3.java`, `ReportGenerator.java`, `PdfReport.java`, `ExcelReport.java`, `CsvReport.java`, `ReportFactory.java` en `src/main/dosw/semana_4/patrones/ejercicio3/`.
+
+**Ejecuttar clase ejercicio:**
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio3.png)
+
+**Justificación:** Sin Template Method, cada tipo de reporte tendría que reimplementar el flujo completo de 4 pasos, duplicando la lógica de obtención y procesamiento de datos (que es idéntica en los tres formatos) y arriesgando que alguien cambie el orden de los pasos por error. Sin Factory Method, el cliente necesitaría un `if/else` o `switch` para decidir qué clase concreta instanciar cada vez que pide un reporte. Combinados, el esqueleto del algoritmo queda protegido (es `final`, no se puede sobreescribir el orden), solo varían los pasos que realmente cambian entre formatos, y agregar un nuevo tipo de reporte (por ejemplo JSON) solo requiere una nueva subclase y un caso más en la Factory — sin tocar el resto del sistema.
+
+### Ejercicio 04 — Plataforma de Videojuegos — Personajes
+
+**Caso:** Un videojuego crea guerreros, magos y arqueros. Cada personaje puede tener habilidades especiales, armadura, arma y mejoras temporales (escudo de hielo, velocidad extra, invisibilidad). El personaje se construye al inicio de la partida, pero sus poderes pueden aumentar dinámicamente durante el juego.
+
+**Patrones combinados:** Builder + Decorator
+
+**Rol de cada patrón:**
+- *Builder* (`WarriorBuilder`) construye el personaje paso a paso al inicio de la partida (`setArmor()`, `setWeapon()`, `setSkill()`, `build()`), evitando un constructor con muchos parámetros. `CharacterDirector` permite construir arquetipos predefinidos como "guerrero élite".
+- *Decorator* (`ShieldDecorator`, `SpeedDecorator`, `InvisibilityDecorator`) agrega poderes temporales dinámicamente durante la partida, envolviendo el personaje sin modificar su clase base.
+
+**Cómo interactúan:** `WarriorBuilder` crea el personaje base configurable (`BaseCharacter`, implementando la interfaz `Character`). Durante la partida, cada poder temporal se aplica envolviendo el personaje con un Decorator (`new ShieldDecorator(new SpeedDecorator(guerrero))`). Cada Decorator, al ejecutar `attack()`, primero delega la llamada al objeto que envuelve y luego suma su propio bono de poder al resultado — así los efectos se acumulan sin que el personaje base sepa que están activos.
+
+**Esquema de clases:**
+
+Character (interfaz) → getNombre(), attack()
+ * BaseCharacter → personaje base construido por el Builder 
+ * CharacterDecorator (abstracta, envuelve un Character)
+ * ShieldDecorator → +5 al poder de ataque 
+ * SpeedDecorator → +3 al poder de ataque 
+ * InvisibilityDecorator → +7 al poder de ataque
+
+* WarriorBuilder → setArmor / setWeapon / setSkill / build()
+* CharacterDirector → arquetipos predefinidos (guerreroElite)
+
+
+**Código implementado:** ver `Ejercicio4.java`, `Character.java`, `BaseCharacter.java`, `WarriorBuilder.java`, `CharacterDirector.java`, `CharacterDecorator.java`, `ShieldDecorator.java`, `SpeedDecorator.java`, `InvisibilityDecorator.java` en `src/main/dosw/semana_4/patrones/ejercicio4/`.
+
+**Ejecuttar clase ejercicio:**
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio4.png)
+
+**Justificación:** Sin Decorator, cada combinación de poderes activos requeriría una subclase distinta — con 5 poderes posibles combinables, eso significa hasta 2⁵ = 32 subclases para cubrir todas las combinaciones. Con Decorator, solo se necesitan 5 wrappers + 1 clase base = 6 clases en total, y se pueden apilar en cualquier orden y cantidad en tiempo de ejecución. Sin Builder, construir un personaje con varios atributos configurables requeriría un constructor con muchos parámetros posicionales (propenso a errores) en vez de una API fluida y legible. Juntos, Builder resuelve "cómo se arma el personaje al inicio" y Decorator resuelve "cómo se potencia durante el juego" — son momentos distintos del ciclo de vida del personaje, y por eso no compiten entre sí.
+
+### Ejercicio 05 — Integración con Sistema Bancario Antiguo
+
+**Caso:** El sistema moderno usa `PaymentProcessor` con métodos modernos. El banco antiguo expone `LegacyBankService` con métodos incompatibles (`executeTransaction`, `verifyBalance` en centavos). Además, usar `LegacyBankService` directamente requiere 8 pasos de inicialización que los desarrolladores no deberían conocer.
+
+**Patrones combinados:** Adapter + Facade
+
+**Rol de cada patrón:**
+- Adapterr (`LegacyBankAdapter`) hace que `LegacyBankService` sea compatible con la interfaz moderna `PaymentProcessor`. Internamente traduce las llamadas: `amount` (pesos, double) → `cents` (centavos, int), y `pay()` → `verifyBalance()` + `executeTransaction()`.
+- Facade (`BankFacade`) expone un único método simple `procesarPago(monto)` que internamente orquesta los 8 pasos de inicialización y uso del banco legacy (o del Adapter). Los desarrolladores solo usan la Facade y nunca conocen los detalles internos.
+
+**Cómo interactúan:** El desarrollador llama `BankFacade.procesarPago(monto)` → la Facade inicializa la conexión y autentica con el banco legacy, prepara el contexto de sesión y valida parámetros → delega al `LegacyBankAdapter`, que traduce el monto al formato legacy (centavos) → `LegacyBankService` verifica saldo y ejecuta la transacción → la Facade registra el comprobante, notifica y cierra la conexión. El desarrollador nunca toca `LegacyBankService` directamente.
+
+**Esquema de clases:**
+
+PaymentProcessor (interfaz moderna) → pay(amount)
+* LegacyBankAdapter implements PaymentProcessor 
+* traduce hacia LegacyBankService (executeTransaction, verifyBalance en centavos)
+
+BankFacade 
+* procesarPago(monto) → orquesta: conexión, autenticación, contexto, validación, 
+* adapter.pay(monto), comprobante, notificación, cierre
+
+
+**Código implementado:** ver `Ejercicio5.java`, `PaymentProcessor.java`, `LegacyBankService.java`, `LegacyBankAdapter.java`, `BankFacade.java` en `src/main/dosw/semana_4/patrones/ejercicio5/`.
+
+**Ejecuttar clase ejercicio:**
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio5.png)
+
+
+**Justificación:** Sin Adapter, el código moderno tendría que conocer directamente los métodos incompatibles del banco legacy (`executeTransaction`, saldos en centavos), acoplando toda la aplicación a los detalles de un sistema que además puede cambiar o ser reemplazado en el futuro. Sin Facade, cada desarrollador que necesite procesar un pago tendría que repetir manualmente los 8 pasos de inicialización, autenticación y cierre de conexión, con alto riesgo de olvidar alguno o hacerlo en el orden incorrecto. Ambos patrones son complementarios, no excluyentes: Adapter resuelve "hablar el idioma del otro sistema", y Facade resuelve "no me cuentes todo, dame lo simple" — la Facade internamente usa el Adapter, cada uno en su propia capa de responsabilidad.
+
+### Ejercicio 06 — Motor de Recomendaciones
+
+**Caso:** Una plataforma tipo Netflix usa algoritmos de recomendación por género, historial, popularidad y similitud con otros usuarios. El usuario puede cambiar sus preferencias de recomendación en cualquier momento. Cuando esto ocurre, la página principal, las notificaciones y la lista de "sugeridos" deben actualizarse automáticamente.
+
+**Patrones combinados:** Strategy + Observer
+
+**Rol de cada patrón:**
+- Strategy es la que permite intercambiar el algoritmo de recomendación en tiempo de ejecución. `GenreStrategy`, `HistoryStrategy` y `PopularityStrategy` implementan `RecommendationAlgorithm`. El motor cambia de algoritmo sin reiniciar la aplicación.
+- Observer notifica automáticamente a todos los componentes cuando cambian las preferencias. `HomePageComponent`, `NotificationService` y `SuggestedListComponent` son Observers del evento "preferencias cambiadas".
+
+**Cómo interactúan:** El `UserProfile` (Subject) mantiene el algoritmo Strategy actual. Cuando el usuario cambia sus preferencias, se le asigna una nueva `RecommendationAlgorithm`, se generan las nuevas recomendaciones con ella, y se notifica a todos los Observers activos pasándoles esas recomendaciones ya calculadas. Cada Observer reacciona actualizando su propia parte de la interfaz, sin necesidad de que la UI haga polling constante preguntando si algo cambió.
+
+**Esquema de clases:**
+
+RecommendationAlgorithm (interfaz) → recommend(usuario)
+* GenreStrategy 
+* HistoryStrategy 
+* PopularityStrategy
+
+PreferenceObserver (interfaz) → onPreferenceChanged(usuario, recomendaciones)
+ * HomePageComponent 
+ * SuggestedListComponent 
+ * NotificationService
+
+UserProfile (Subject)
+ * cambiarAlgoritmo(nuevo) → recalcula recomendaciones y notifica a todos los Observers
+
+
+**Código implementado:** ver `Ejercicio6.java`, `RecommendationAlgorithm.java`, `GenreStrategy.java`, `HistoryStrategy.java`, `PopularityStrategy.java`, `PreferenceObserver.java`, `HomePageComponent.java`, `SuggestedListComponent.java`, `NotificationService.java`, `UserProfile.java` en `src/main/dosw/semana_4/patrones/ejercicio6/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio6.png)
+
+**Justificación:** Sin Strategy, cambiar el algoritmo de recomendación implicaría un `if/else` gigante dentro de `UserProfile` evaluando qué tipo de recomendación calcular, mezclando la lógica de cada algoritmo en una sola clase difícil de mantener y extender. Sin Observer, `UserProfile` tendría que conocer explícitamente cada componente de la UI (HomePage, lista de sugeridos, notificaciones) y llamarlos uno por uno manualmente cada vez que cambia algo, generando acoplamiento fuerte. Los dos patrones son ortogonales y se complementan: Strategy responde "cómo recomendar", Observer responde "a quién avisar que cambió el cómo" — cambiar el algoritmo dispara automáticamente el aviso a los componentes que deben re-renderizarse.
+
+### Ejercicio 07 — Flujo de Aprobación de Documentos
+
+**Caso:** Los documentos pasan por: revisión del autor, revisión del líder, revisión jurídica, revisión financiera y aprobación final. No todos pasan por todas las etapas. Además, el documento tiene estados propios: borrador, en revisión, aprobado, rechazado. La transición de estado depende del resultado de cada handler de la cadena.
+
+**Patrones combinados:** Chain of Responsibility + State
+
+**Rol de cada patrón:**
+- Chain of Responsibility encadena los validadores (`AutorHandler`, `LiderHandler`, `JuridicoHandler`, `FinancieroHandler`). Cada handler decide si le corresponde procesar el documento (`canHandle()`) según el tipo de documento y su fase actual. La cadena puede configurarse distinto según el tipo de documento (por ejemplo, saltando la revisión jurídica si no aplica).
+- State (`DraftState`, `InReviewState`, `ApprovedState`, `RejectedState`) maneja las transiciones de fase del documento. Cada estado sabe a qué estado puede transicionar cuando se le pide `approve()` o `reject()`, eliminando cualquier `switch`/`if` sobre el estado dentro de la clase `Document`.
+
+**Cómo interactúan:** Un handler de la cadena procesa el documento (o lo salta, si no le corresponde) → si decide aprobar esa etapa, invoca `documento.approve()` → el objeto `DocumentState` actual del documento ejecuta la transición correspondiente (por ejemplo, de Borrador a En Revisión) → el documento nunca tiene un `switch` de estados, ni sabe en qué fase está: su estado actual es quien sabe qué hacer.
+
+**Decisión de diseño — variante del Chain of Responsibility:** El esquema sugerido en el PDF describe un handler que procesa **exclusivamente** su caso o delega al siguiente (`if (canHandle) process(); else next.handle()`), como un sistema de niveles de soporte donde solo un nivel atiende el ticket. Pero este caso de uso necesita que **varias** etapas ocurran en secuencia sobre el mismo documento (autor → líder → jurídica → financiera), no que una sola las maneje todas. Por eso se implementó la variante de **pipeline de validación**: cada handler evalúa independientemente si le aplica esta etapa (`canHandle()`), la procesa si aplica, y **siempre** continúa la cadena después, sin importar si actuó o no. Esto sigue siendo genuinamente Chain of Responsibility — cada eslabón decide autónomamente si actúa, y el documento no conoce la secuencia de validadores — solo que es la variante usada en pipelines de aprobación/validación (similar a como funcionan los middlewares de Express o los interceptores de Spring), en vez de la variante de "dispatch exclusivo" del esquema original.
+
+Solo dos handlers modifican el estado del documento: `AutorHandler` (hace la única transición posible desde Borrador, "Borrador → En Revisión") y `FinancieroHandler`, al ser el último eslabón de la cadena, hace la transición final ("En Revisión → Aprobado"). `LiderHandler` y `JuridicoHandler` son validaciones intermedias que no cambian el estado, ya que el State modela la fase general del ciclo de vida del documento, no quién lo revisó.
+
+**Esquema de clases:**
+
+DocumentState (interfaz) → approve(doc), reject(doc)
+ * DraftState → approve: Borrador → En Revisión 
+ * InReviewState → approve: En Revisión → Aprobado / reject: → Rechazado 
+ * ApprovedState → estado terminal, sin transiciones 
+ * RejectedState → estado terminal, sin transiciones
+
+Document
+* delega approve()/reject() al DocumentState actual
+
+DocumentHandler (abstracta) → setNext(), handle(doc), canHandle(doc), process(doc)
+* AutorHandler → aplica si el doc está en Borrador; transiciona a En Revisión
+* LiderHandler → aplica si el doc está En Revisión; solo valida
+* JuridicoHandler → aplica solo si el doc requiere revisión jurídica; solo valida
+* FinancieroHandler → aplica si el doc está En Revisión; transiciona a Aprobado
+
+
+**Código implementado:** ver `Ejercicio7.java`, `DocumentState.java`, `DraftState.java`, `InReviewState.java`, `ApprovedState.java`, `RejectedState.java`, `Document.java`, `DocumentHandler.java`, `AutorHandler.java`, `LiderHandler.java`, `JuridicoHandler.java`, `FinancieroHandler.java` en `src/main/dosw/semana_4/patrones/ejercicio7/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio7.png)
+
+**Justificación:** Sin Chain of Responsibility, `Document` (o alguna clase orquestadora) tendría que conocer explícitamente todos los tipos de validación posibles y decidir con lógica condicional cuáles aplican a cada documento, mezclando reglas de negocio de distintos departamentos en un solo lugar. Sin State, cada método de `Document` tendría un `switch(estado) { case DRAFT: ... case IN_REVIEW: ... }` repetido, con riesgo de inconsistencias si se olvida actualizar algún caso al agregar un estado nuevo. Combinados: agregar un nuevo tipo de validador (por ejemplo, revisión de cumplimiento) solo requiere crear una clase `ComplianceHandler` y añadirla a la cadena; agregar un nuevo estado del documento solo requiere una nueva implementación de `DocumentState` — ninguno de los dos cambios toca la clase `Document` ni el resto de handlers existentes.
+
+
+### Ejercicio 08 — Sistema de Pedidos en Restaurante
+
+**Caso:** El cliente construye una hamburguesa eligiendo ingredientes, tamaño, tipo de pan, acompañamientos y extras. Después de confirmado el pedido, el sistema debe notificar a cocina (preparar), a facturación (generar cuenta) y al domiciliario (preparar ruta) sin que el pedido los conozca directamente.
+
+**Patrones combinados:** Builder + Observer
+
+**Rol de cada patrón:**
+- Builder (`OrderBuilder`) construye el pedido personalizado paso a paso mediante una API fluida (`setSize()`, `setMeat()`, `addTopping()`, `addSide()`). El pedido resultante (`Order`) es inmutable una vez construido (`build()` valida que los campos obligatorios estén presentes antes de crear el objeto). Evita el constructor caótico con todos los ingredientes como parámetros posicionales.
+- Observer (`KitchenService`, `BillingService`, `DeliveryService`) notifica a los subsistemas cuando el pedido se confirma. El `Order` solo hace `confirm()` — no sabe a quién avisar ni qué hace cada suscriptor con esa información.
+
+**Cómo interactúan:** El cliente configura el pedido con `OrderBuilder` → llama `build()`, que retorna un `Order` inmutable (con listas de toppings y sides ya copiadas para que no puedan modificarse después) → el sistema suscribe los observers al pedido → llama `order.confirm()` → el `Order` notifica a todos sus Observers, y cada subsistema reacciona de forma independiente: Cocina prepara según los ingredientes, Facturación calcula el total según tamaño y cantidad de acompañamientos, y Domicilio prepara la ruta.
+
+
+**Decisión de diseño:** El PDF menciona que `Order` debe ser "inmutable una vez construido", así que `OrderBuilder.build()` no solo valida los campos obligatorios, sino que además copia las listas de toppings y sides con `List.copyOf()` antes de crear el `Order`. Esto es importante porque si simplemente se pasaran las listas internas del Builder tal cual, alguien podría seguir modificándolas desde fuera después de construido el pedido (por ejemplo, llamando `.add()` sobre la lista original), rompiendo la inmutabilidad que se buscaba garantizar. `List.copyOf()` crea una copia de solo lectura, verdaderamente congelada.
+
+También se decidió que el cálculo del precio (`BillingService`) viva completamente separado de `Order`, aunque técnicamente `Order` tiene toda la información necesaria (tamaño, cantidad de sides) para calcularlo él mismo. Esto es intencional:
+**Esquema de clases:**
+
+OrderBuilder → setSize / setMeat / addTopping / addSide / build()
+* Order (inmutable) → mantiene lista de OrderObserver, notifica al confirmar
+
+OrderObserver (interfaz) → onOrderConfirmed(order)
+ * KitchenService → prepara según ingredientes 
+ * BillingService → calcula el total según tamaño y acompañamientos 
+ * DeliveryService → prepara la ruta de entrega
+
+
+**Código implementado:** ver `Ejercicio8.java`, `Size.java`, `Meat.java`, `Order.java`, `OrderBuilder.java`, `OrderObserver.java`, `KitchenService.java`, `BillingService.java`, `DeliveryService.java` en `src/main/dosw/semana_4/patrones/ejercicio8/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio8.png)
+
+**Justificación:** Sin Builder, crear un pedido con todos sus atributos opcionales requeriría un constructor con muchos parámetros (o varios constructores sobrecargados) difícil de leer y propenso a errores de orden. Sin Observer, `Order` tendría que conocer explícitamente las clases `KitchenService`, `BillingService` y `DeliveryService`, y llamarlas una por una manualmente al confirmarse — acoplando el pedido a la implementación específica de cada subsistema. Combinados, Builder garantiza que el pedido esté completo y válido antes de existir (las invariantes se verifican en `build()`), y Observer garantiza que la confirmación desencadene reacciones en cascada sin acoplamiento. Son momentos distintos del ciclo de vida del pedido: construcción vs. notificación.
+
+### Ejercicio 09 — Sistema de Autenticación Empresarial
+
+**Caso:** La empresa tiene 5 métodos de autenticación: usuario/contraseña, Google, Microsoft, token empresarial y biometría. Según el tipo de usuario, el sistema selecciona el mecanismo correcto. Una vez autenticado, la solicitud pasa por: validación de credenciales, validación de permisos, validación de ubicación y validación de horario laboral.
+
+**Patrones combinados:** Strategy + Chain of Responsibility
+
+**Rol de cada patrón:**
+-  Strategy selecciona el mecanismo de autenticación. `PasswordStrategy`, `GoogleStrategy` y `BiometricStrategy` implementan `AuthStrategy`. `AuthService` recibe el tipo de usuario y elige la estrategia correcta, llamando `authenticate()`.
+- Chain of Responsibility procesa las validaciones posteriores en secuencia: `CredentialValidator` → `PermissionValidator` → `LocationValidator` → `TimeValidator`. Cada uno decide si pasa al siguiente o lanza una `AccessDeniedException` que detiene la cadena.
+
+**Cómo interactúan:** El usuario intenta acceder → `AuthService` selecciona la `AuthStrategy` correcta según su tipo → si la autenticación es exitosa, el resultado pasa por la cadena de validadores → si todos aprueban sin lanzar excepción, se concede acceso; si alguno falla, la excepción interrumpe la cadena inmediatamente. Strategy decide "cómo autentico"; Chain decide "si tengo acceso".
+
+**Decisión de diseño:** A diferencia del Ejercicio 7 (donde la cadena siempre continúa aunque un handler no aplique), aquí sí se usa la variante de Chain of Responsibility más cercana al esquema clásico: cada validador **siempre se ejecuta** (no hay `canHandle()` que decida si aplica), pero cualquiera puede **detener por completo** la cadena lanzando una excepción. Esto tiene sentido porque las 4 validaciones de seguridad (credenciales, permisos, ubicación, horario) no son opcionales según el tipo de solicitud — todas deben cumplirse siempre, y basta con que una falle para negar el acceso. Es una variante de "cadena de validación estricta" (fail-fast), apropiada para un flujo de seguridad, distinta de la "cadena de pipeline configurable" del Ejercicio 7 donde algunas etapas eran opcionales según el tipo de documento.
+
+**Esquema de clases:**
+
+AuthStrategy (interfaz) → authenticate(credentials)
+ * PasswordStrategy 
+ * GoogleStrategy 
+ * BiometricStrategy
+
+AuthService → login(tipoUsuario, credentials) selecciona la Strategy correcta
+
+Validator (abstracta) → setNext(), validate(credentials), check(credentials)
+ * CredentialValidator 
+ * PermissionValidator 
+ * LocationValidator 
+ * TimeValidator
+
+(cualquiera puede lanzar AccessDeniedException y detener la cadena creada)
+
+
+**Código implementado:** ver `Ejercicio9.java`, `Credentials.java`, `AuthResult.java`, `AuthStrategy.java`, `PasswordStrategy.java`, `GoogleStrategy.java`, `BiometricStrategy.java`, `AuthService.java`, `Validator.java`, `CredentialValidator.java`, `PermissionValidator.java`, `LocationValidator.java`, `TimeValidator.java`, `AccessDeniedException.java` en `src/main/dosw/semana_4/patrones/ejercicio9/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio9.png)
+
+**Justificación:** Sin Strategy, `AuthService` tendría que implementar los 5 mecanismos de autenticación directamente con un `switch` gigante mezclando lógica de contraseñas, OAuth y biometría en una sola clase. Sin Chain of Responsibility, todas las validaciones de seguridad (credenciales, permisos, ubicación, horario) tendrían que anidarse en `if` sucesivos dentro de un solo método, dificultando agregar o reordenar validaciones. Combinados, agregar un sexto mecanismo de autenticación (por ejemplo Microsoft o token empresarial) solo requiere una nueva clase `AuthStrategy`, y agregar una quinta validación de seguridad solo requiere una nueva clase `Validator` insertada en la cadena — ninguno de los dos patrones interfiere con el otro, porque operan en fases distintas del flujo: autenticación (quién eres) y autorización (qué puedes hacer).
+
+### Ejercicio 10 — Aplicación de Edición de Imágenes
+
+**Caso:** La app permite aplicar filtros acumulativos: blanco y negro, sepia, brillo, contraste y reducción de ruido. El usuario puede aplicar varios filtros sobre la misma imagen en cualquier orden. Además, cada acción debe poder deshacerse de manera individual (no solo deshacer la última).
+
+**Patrones combinados:** Decorator + Command
+
+**Rol de cada patrón:**
+- *Decorator* (`GrayscaleDecorator`, `SepiaDecorator`, `BrightnessDecorator`) aplica filtros de forma acumulativa envolviendo la imagen. Se pueden apilar en cualquier orden; agregar un filtro nuevo no modifica los existentes ni la imagen base.
+- *Command* (`ApplyFilterCommand`) encapsula cada operación del usuario como un objeto con `execute()` y `undo()`. El `ImageEditor` mantiene el historial de filtros activos, permitiendo deshacer cualquiera de ellos individualmente.
+
+**Cómo interactúan:** El usuario aplica un filtro → se crea un `ApplyFilterCommand` que se registra en `ImageEditor` como filtro activo → cuando se pide la imagen actual, el editor reconstruye la imagen desde `BaseImage` envolviéndola en orden con cada filtro todavía activo → el usuario deshace un filtro específico → el comando se quita de la lista de activos → la imagen se reconstruye de nuevo, esta vez sin ese filtro, preservando el resto en su orden original.
+
+**Decisión de diseño:** El esquema del PDF sugiere que `undo()` simplemente "quite el último wrapper" (`image = image.getWrapped()`), lo cual funciona perfecto si solo se permite deshacer la acción más reciente — como una pila LIFO clásica. Pero el enunciado pide explícitamente que **cualquier** filtro pueda deshacerse individualmente, sin importar si fue el primero, el del medio o el último en aplicarse. Con Decorators anidados de la forma tradicional (`new A(new B(new C(imagen)))`), remover una capa intermedia sin afectar las demás no es posible sin reconstruir la cadena. Por eso, en vez de que cada `ApplyFilterCommand` guarde una referencia fija a un objeto `Image` ya envuelto, cada comando guarda solo la **función constructora** del decorator (`GrayscaleDecorator::new`) y `ImageEditor` mantiene una lista ordenada de comandos activos, reconstruyendo la imagen final aplicando esa lista sobre `BaseImage` cada vez que se consulta. Así, deshacer un filtro (`sepia.undo()`) simplemente lo quita de la lista, y la imagen se recalcula respetando el orden y presencia de los filtros restantes — logrando el undo individual real que pide el enunciado, sin perder la esencia del Decorator (la imagen base nunca cambia, solo se envuelve).
+
+**Esquema de clases:**
+
+Image (interfaz) → render()
+ * BaseImage → "Imagen original"
+ * ImageDecorator (abstracta, envuelve un Image)
+ * GrayscaleDecorator 
+ * SepiaDecorator 
+ * BrightnessDecorator
+
+ImageCommand (interfaz) → execute(), undo()
+*  ApplyFilterCommand → guarda la función constructora del Decorator, no una instancia fija
+
+ImageEditor
+* mantiene lista ordenada de ApplyFilterCommand activos; reconstruye la imagen bajo demanda
+
+
+**Código implementado:** ver `Ejercicio10.java`, `Image.java`, `BaseImage.java`, `ImageDecorator.java`, `GrayscaleDecorator.java`, `SepiaDecorator.java`, `BrightnessDecorator.java`, `ImageCommand.java`, `ApplyFilterCommand.java`, `ImageEditor.java` en `src/main/dosw/semana_4/patrones/ejercicio10/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio10.png)
+
+**Justificación:** Sin Decorator, cada combinación posible de filtros requeriría una clase distinta (explosión combinatoria: con 5 filtros posibles serían hasta 2⁵ = 32 clases). Sin Command, no habría forma de registrar "qué se hizo" como objetos manipulables — el historial de acciones no existiría como tal, y deshacer requeriría lógica ad-hoc dispersa por la aplicación. Combinados, Command trata cada aplicación de filtro como una unidad reversible e independiente, y Decorator garantiza que la imagen base nunca se modifique directamente, solo se envuelva — la sensación de "capas" que el usuario espera al editar una imagen.
