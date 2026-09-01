@@ -253,3 +253,30 @@ public class Ejercicio2 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio2.png)
 
 **Explicación:** Se usó `map()` con method reference (`String::toUpperCase`) para transformar cada nombre a mayúsculas de forma simple y directa.
+
+### Ejercicio 03 — Poder Total del Equipo
+
+Dada una lista de niveles de Pokémon, calcular la suma total de niveles del equipo.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+
+public class Ejercicio3 {
+
+    public static void main(String[] args) {
+        List<Integer> niveles = List.of(45, 62, 38, 71, 55, 29);
+
+        int sumaTotal = niveles.stream()
+                .reduce(0, Integer::sum);
+
+        System.out.println("Suma total de niveles: " + sumaTotal);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio3.png)
+
+**Explicación:** Se usó `reduce()` con un valor inicial de 0 y `Integer::sum` como method reference para acumular la suma de todos los niveles del Stream.
