@@ -1021,3 +1021,50 @@ public class Ejercicio20 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio20.png)
 
 **Explicación:** Este ejercicio de cierre combina prácticamente todos los operadores vistos en el taller. Se usó `groupingBy()` con `Collectors.counting()` (en vez del `Collectors.mapping()` de los ejercicios 13 y 14) porque aquí solo interesa *cuántos* Pokémon hay por grupo, no sus nombres — `counting()` es un recolector downstream que simplemente cuenta los elementos de cada grupo en vez de coleccionarlos. Para los legendarios se usó `filter()` con method reference (`Pokemon::isLegendario`) seguido de `count()`, ya que es un total simple sin necesidad de agrupar. El promedio de nivel reutiliza el patrón de `mapToInt()` + `average()` visto en el Ejercicio 11. Finalmente, para el Pokémon más fuerte se usó `max()` con `Comparator.comparingDouble()`, igual que en ejercicios anteriores, y se aprovechó el `ifPresent()` de ese resultado para imprimir todo el reporte junto, evitando declarar variables sueltas fuera de los streams.
+
+---
+
+# TALLER DOSW #4 — Patrones de Diseño Combinados
+
+## Datos personales:
+- Nombre y Apellido Cristian Santiago Moreno
+- Código de Estudiante: 1000100162
+- Curso: DOSW
+
+---
+
+### Ejercicio 01 — Plataforma de Pagos Inteligentes
+
+**Caso:** Una aplicación de e-commerce permite pagar con tarjeta, PSE, Nequi, PayPal y transferencia bancaria. Cada medio tiene una lógica distinta pero el flujo de compra es el mismo. Además, según el país del usuario, el sistema construye el proveedor de pago correcto.
+
+**Patrones combinados:** Strategy + Factory Method
+
+**Rol de cada patrón:**
+- *Strategy* encapsula cada algoritmo de pago en una clase independiente (`TarjetaStrategy`, `PseStrategy`, `NequiStrategy`, `PaypalStrategy`, `StripeStrategy`), todas implementando la interfaz `PaymentStrategy`. Esto permite que `Checkout` use cualquier medio de pago sin conocer su implementación interna.
+- *Factory Method* decide qué proveedor de pago construir según el país del usuario. `ColombiaPaymentFactory` solo sabe construir PSE, Nequi y Tarjeta; `UsaPaymentFactory` solo sabe construir PayPal, Stripe y Tarjeta.
+
+**Cómo interactúan:** El cliente (`Checkout`) recibe una `PaymentFactory` según el país del usuario. Cuando se necesita procesar un pago, `Checkout` le pide a la Factory que construya la `PaymentStrategy` correspondiente al medio elegido, y luego simplemente llama `strategy.process(amount)` sin saber qué clase concreta se instanció. La Factory decide *qué* Strategy instanciar; el Checkout nunca cambia.
+
+**Esquema de clases:**
+
+PaymentStrategy (interfaz)
+
+ * TarjetaStrategy 
+ * PseStrategy 
+ * NequiStrategy 
+ * PaypalStrategy 
+ * StripeStrategy
+
+PaymentFactory (interfaz)
+* ColombiaPaymentFactory, crea PSE / Nequi / Tarjeta
+* UsaPaymentFactory, crea PayPal / Stripe / Tarjeta
+
+Checkout
+* usa PaymentFactory para obtener una PaymentStrategy y ejecutarla
+
+
+**Código implementado:** ver `Ejercicio1.java`, `Checkout.java`, `PaymentStrategy.java`, `TarjetaStrategy.java`, `PseStrategy.java`, `NequiStrategy.java`, `PaypalStrategy.java`, `StripeStrategy.java`, `PaymentFactory.java`, `ColombiaPaymentFactory.java`, `UsaPaymentFactory.java` en `src/main/dosw/semana_4/patrones/`.
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio1.png)
+
+**Justificación:** Sin esta combinación, `Checkout` tendría que conocer directamente todas las clases concretas de pago y decidir con `if/else` o `switch` según el país cuál instanciar — mezclando la lógica de "qué país es" con la de "cómo se procesa cada pago". Separando estas dos responsabilidades con Strategy (el algoritmo de pago) y Factory Method (la construcción según contexto), se puede agregar un nuevo medio de pago o un nuevo país sin modificar `Checkout` en absoluto, cumpliendo el principio Open/Closed.
