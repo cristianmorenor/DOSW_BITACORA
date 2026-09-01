@@ -562,6 +562,42 @@ public class Ejercicio10 {
 }
 ```
 
-**Captura de ejecución:** ![img_5.png](img_5.png)
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio10.png)
 
 **Explicación:** Este ejercicio es un caso directo de transformación de tipo dentro de un Stream: se parte de una `List<Pokemon>` (objetos complejos con siete atributos cada uno) y se necesita llegar a una `List<String>` que contenga solo un dato puntual de cada objeto. Para eso se usa `map()`, cuya función es aplicar una transformación a cada elemento del Stream sin alterar la cantidad de elementos ni el orden original. Como transformación se usó el method reference `Pokemon::getNombre`, equivalente a escribir la lambda `p -> p.getNombre()`, pero más compacto y legible, ya que simplemente delega la llamada al getter correspondiente de cada objeto. El resultado de `map()` sigue siendo un Stream, por lo que se cierra con `collect(Collectors.toList())` para materializarlo de nuevo en una lista concreta que se pueda imprimir. Este patrón (`map()` + `getX()`) es la base de casi todas las "proyecciones" de datos que se piden más adelante en el taller, donde se necesita extraer un subconjunto de información de una colección de objetos más ricos.
+
+### Ejercicio 11 — Poder Promedio
+
+Calcular el promedio de poderCombate de todos los Pokémon del equipo.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+
+public class Ejercicio11 {
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon(1L, "Pikachu", "Eléctrico", 45, 320, "Kanto", false),
+                new Pokemon(2L, "Mewtwo", "Psíquico", 88, 680, "Kanto", true),
+                new Pokemon(3L, "Dragonite", "Dragón", 82, 530, "Kanto", false),
+                new Pokemon(4L, "Squirtle", "Agua", 38, 210, "Kanto", false),
+                new Pokemon(5L, "Gengar", "Fantasma", 65, 495, "Kanto", false),
+                new Pokemon(6L, "Charizard", "Fuego", 78, 610, "Kanto", false)
+        );
+
+        double promedio = pokemones.stream()
+                .mapToDouble(Pokemon::getPoderCombate)
+                .average()
+                .orElse(0);
+
+        System.out.printf("Poder de combate promedio: %.2f%n", promedio);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio11.png)
+
+**Explicación:** Este ejercicio necesita un dato numérico agregado (un promedio), y para eso Java ofrece los Streams especializados en primitivos (`IntStream`, `LongStream`, `DoubleStream`), que traen operaciones estadísticas listas como `average()`, `sum()`, `min()` y `max()` sin necesidad de escribirlas manualmente con `reduce()`. Para llegar a ese Stream especializado se usó `mapToDouble()` en vez del `map()` normal: mientras `map()` transforma un Stream de objetos en otro Stream de objetos, `mapToDouble()` transforma un Stream de objetos (`Pokemon`) directamente en un `DoubleStream` de valores primitivos, extrayendo el `poderCombate` de cada uno mediante el method reference `Pokemon::getPoderCombate`. Sobre ese `DoubleStream` ya se puede llamar `average()`, que retorna un `OptionalDouble` (no un `double` directo) porque técnicamente el Stream podría estar vacío y no existiría promedio calculable; por eso se usa `.orElse(0)` como valor de respaldo. Finalmente, `System.out.printf` con el formato `%.2f` se usó para mostrar el resultado con exactamente dos decimales, tal como pide la salida esperada del taller (474.17 y no 474.166666...).
