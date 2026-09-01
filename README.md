@@ -636,3 +636,42 @@ public class Ejercicio12 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio12.png)
 
 **Explicación:** Aunque este ejercicio es muy similar al #4 (Pokémon Alfa), aquí se comparó por `poderCombate` (un `double`) en vez de por `nivel` (un `int`), por eso se usó `Comparator.comparingDouble()` en lugar de `comparingInt()` — cada tipo primitivo tiene su variante especializada del comparador para evitar el costo de autoboxing (convertir el primitivo a su clase envolvente `Double`/`Integer`) que ocurriría si se usara `Comparator.comparing()` genérico. El method reference `Pokemon::getPoderCombate` le indica al comparador qué campo usar para decidir el "mayor" entre dos
+
+### Ejercicio 13 — Organizar por Tipo
+
+Agrupar todos los Pokémon por su tipo y mostrar el listado por grupo.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class Ejercicio13 {
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon(1L, "Squirtle", "Agua", 38, 210, "Kanto", false),
+                new Pokemon(2L, "Psyduck", "Agua", 25, 180, "Kanto", false),
+                new Pokemon(3L, "Charmander", "Fuego", 25, 250, "Kanto", false),
+                new Pokemon(4L, "Vulpix", "Fuego", 30, 260, "Kanto", false),
+                new Pokemon(5L, "Bulbasaur", "Planta", 22, 220, "Kanto", false)
+        );
+
+        Map<String, List<String>> porTipo = pokemones.stream()
+                .collect(Collectors.groupingBy(
+                        Pokemon::getTipo,
+                        Collectors.mapping(Pokemon::getNombre, Collectors.toList())
+                ));
+
+        porTipo.forEach((tipo, nombres) -> System.out.println(tipo + ": " + nombres));
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio13.png)
+
+
+**Explicación:** Este ejercicio introduce `Collectors.groupingBy()`, el recolector encargado de dividir un Stream en subgrupos según una función clasificadora. Aquí la clasificación se hace por `Pokemon::getTipo`, así que el resultado final es un `Map<String, List<Pokemon>>` donde cada clave es un tipo (Agua, Fuego, Planta...) y cada valor la lista de Pokémon de ese tipo. Sin embargo, la salida esperada solo pide los *nombres*, no los objetos completos — por eso se usó la forma de dos argumentos de `groupingBy()`, donde el segundo argumento es un `Collector` "downstream" que se aplica dentro de cada grupo. En este caso se usó `Collectors.mapping(Pokemon::getNombre, Collectors.toList())`, que transforma cada elemento del grupo con `getNombre()` antes de coleccionarlo en una lista, evitando tener que hacer un segundo `map()` por separado después de agrupar. Finalmente se recorrió el `Map` resultante con `forEach()` para imprimir cada tipo junto a su lista de nombres.
