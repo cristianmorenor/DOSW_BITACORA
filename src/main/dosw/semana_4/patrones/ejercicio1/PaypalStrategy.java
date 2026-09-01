@@ -1,4 +1,4 @@
-package dosw.semana_4.patrones;
+package dosw.semana_4.patrones.ejercicio1;
 
 public class PaypalStrategy implements PaymentStrategy {
     public void process(double amount) {

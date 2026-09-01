@@ -1,4 +1,4 @@
-package dosw.semana_4.patrones;
+package dosw.semana_4.patrones.ejercicio1;
 
 public class Checkout {
     private final PaymentFactory factory;

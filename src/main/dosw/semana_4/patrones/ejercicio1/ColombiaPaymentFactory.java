@@ -1,4 +1,4 @@
-package dosw.semana_4.patrones;
+package dosw.semana_4.patrones.ejercicio1;
 
 public class ColombiaPaymentFactory implements PaymentFactory {
     public PaymentStrategy create(String type) {
