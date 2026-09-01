@@ -140,3 +140,40 @@ public class Ejercicio4 {
 **Captura de ejecución:** ![](evidencias/ejercicio4.png)
 
 **Explicación:** Se usó `filter()` con una lambda para quedarnos únicamente con los usuarios de 18 años o más, y `map()` con method reference (`User::name`) para extraer solo sus nombres.
+
+### Ejercicio 05 — Transacciones Bancarias
+
+Dada una lista de transacciones bancarias (id, amount, approved), procesar la lista usando Streams para: ver cada transacción con `peek()`, verificar si existe al menos una no aprobada, y retornar si el lote es válido.
+
+**Código implementado:**
+```java
+package dosw.semana_1.streams;
+
+import java.util.List;
+
+public class Ejercicio5 {
+
+    record Transaction(String id, double amount, boolean approved) {}
+
+    public static void main(String[] args) {
+        List<Transaction> transactions = List.of(
+                new Transaction("T1", 150.0, true),
+                new Transaction("T2", 300.0, true),
+                new Transaction("T3", 75.5, false),
+                new Transaction("T4", 200.0, true)
+        );
+
+        boolean hayNoAprobadas = transactions.stream()
+                .peek(System.out::println)
+                .anyMatch(t -> !t.approved());
+
+        boolean loteValido = !hayNoAprobadas;
+
+        System.out.println("¿Lote válido? " + loteValido);
+    }
+}
+```
+
+**Captura de ejecución:** ![img_4.png](img_4.png)
+
+**Explicación:** Se usó `peek()` para imprimir cada transacción a medida que se procesa, y `anyMatch()` para verificar si existe al menos una no aprobada. Como `anyMatch()` hace corto circuito, deja de evaluar transacciones apenas encuentra una que cumple la condición (por eso T4 no se llegó a procesar). El lote se considera válido solo si no hay ninguna no aprobada.
