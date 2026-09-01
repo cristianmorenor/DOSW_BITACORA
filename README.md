@@ -82,11 +82,10 @@ public class Ejercicio3 {
 
     public static void main(String[] args) {
         List<User> users = List.of(
-                new User(1, "Carlos", 25, true),
-                new User(2, "Ana", 17, false),
-                new User(3, "Beatriz", 30, true),
-                new User(4, "Diego", 22, false),
-                new User(5, "Elena", 28, true)
+                new User(1, "Daniel", 25, true),
+                new User(2, "Ana", 27, false),
+                new User(3, "Beatriz", 20, true),
+                new User(4, "Diego", 32, false),
         );
 
         List<String> sortedUsers = users.stream()
@@ -104,3 +103,40 @@ public class Ejercicio3 {
 **Captura de ejecución:** ![img_2.png](img_2.png)
 
 **Explicación:** Se usó `filter()` con method reference (`User::active`) para quedarnos solo con los usuarios activos, `map()` para extraer el nombre (`User::name`) y transformarlo a mayúsculas (`String::toUpperCase`), y `sorted()` para ordenar alfabéticamente el resultado.
+
+### Ejercicio 04 — Personas mayores de edad
+
+Dado un listado de Usuarios (mismos atributos anteriores), filtrar las personas mayores de edad y obtener sus nombres.
+
+**Código implementado:**
+```java
+package dosw.semana_1.streams;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio4 {
+
+    record User(int id, String name, int age, boolean active) {}
+
+    public static void main(String[] args) {
+        List<User> users = List.of(
+                new User(1, "Daniel", 25, true),
+                new User(2, "Ana", 27, false),
+                new User(3, "Juliana", 15, true),
+                new User(4, "Diego", 32, false)
+        );
+
+        List<String> mayores = users.stream()
+                .filter(u -> u.age() >= 18)
+                .map(User::name)
+                .collect(Collectors.toList());
+
+        System.out.println(mayores);
+    }
+}
+```
+
+**Captura de ejecución:** ![img_3.png](img_3.png)
+
+**Explicación:** Se usó `filter()` con una lambda para quedarnos únicamente con los usuarios de 18 años o más, y `map()` con method reference (`User::name`) para extraer solo sus nombres.
