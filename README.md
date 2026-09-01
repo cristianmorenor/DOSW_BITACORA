@@ -1236,3 +1236,44 @@ UserProfile (Subject)
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio6.png)
 
 **Justificación:** Sin Strategy, cambiar el algoritmo de recomendación implicaría un `if/else` gigante dentro de `UserProfile` evaluando qué tipo de recomendación calcular, mezclando la lógica de cada algoritmo en una sola clase difícil de mantener y extender. Sin Observer, `UserProfile` tendría que conocer explícitamente cada componente de la UI (HomePage, lista de sugeridos, notificaciones) y llamarlos uno por uno manualmente cada vez que cambia algo, generando acoplamiento fuerte. Los dos patrones son ortogonales y se complementan: Strategy responde "cómo recomendar", Observer responde "a quién avisar que cambió el cómo" — cambiar el algoritmo dispara automáticamente el aviso a los componentes que deben re-renderizarse.
+
+### Ejercicio 07 — Flujo de Aprobación de Documentos
+
+**Caso:** Los documentos pasan por: revisión del autor, revisión del líder, revisión jurídica, revisión financiera y aprobación final. No todos pasan por todas las etapas. Además, el documento tiene estados propios: borrador, en revisión, aprobado, rechazado. La transición de estado depende del resultado de cada handler de la cadena.
+
+**Patrones combinados:** Chain of Responsibility + State
+
+**Rol de cada patrón:**
+- Chain of Responsibility encadena los validadores (`AutorHandler`, `LiderHandler`, `JuridicoHandler`, `FinancieroHandler`). Cada handler decide si le corresponde procesar el documento (`canHandle()`) según el tipo de documento y su fase actual. La cadena puede configurarse distinto según el tipo de documento (por ejemplo, saltando la revisión jurídica si no aplica).
+- State (`DraftState`, `InReviewState`, `ApprovedState`, `RejectedState`) maneja las transiciones de fase del documento. Cada estado sabe a qué estado puede transicionar cuando se le pide `approve()` o `reject()`, eliminando cualquier `switch`/`if` sobre el estado dentro de la clase `Document`.
+
+**Cómo interactúan:** Un handler de la cadena procesa el documento (o lo salta, si no le corresponde) → si decide aprobar esa etapa, invoca `documento.approve()` → el objeto `DocumentState` actual del documento ejecuta la transición correspondiente (por ejemplo, de Borrador a En Revisión) → el documento nunca tiene un `switch` de estados, ni sabe en qué fase está: su estado actual es quien sabe qué hacer.
+
+**Decisión de diseño — variante del Chain of Responsibility:** El esquema sugerido en el PDF describe un handler que procesa **exclusivamente** su caso o delega al siguiente (`if (canHandle) process(); else next.handle()`), como un sistema de niveles de soporte donde solo un nivel atiende el ticket. Pero este caso de uso necesita que **varias** etapas ocurran en secuencia sobre el mismo documento (autor → líder → jurídica → financiera), no que una sola las maneje todas. Por eso se implementó la variante de **pipeline de validación**: cada handler evalúa independientemente si le aplica esta etapa (`canHandle()`), la procesa si aplica, y **siempre** continúa la cadena después, sin importar si actuó o no. Esto sigue siendo genuinamente Chain of Responsibility — cada eslabón decide autónomamente si actúa, y el documento no conoce la secuencia de validadores — solo que es la variante usada en pipelines de aprobación/validación (similar a como funcionan los middlewares de Express o los interceptores de Spring), en vez de la variante de "dispatch exclusivo" del esquema original.
+
+Solo dos handlers modifican el estado del documento: `AutorHandler` (hace la única transición posible desde Borrador, "Borrador → En Revisión") y `FinancieroHandler`, al ser el último eslabón de la cadena, hace la transición final ("En Revisión → Aprobado"). `LiderHandler` y `JuridicoHandler` son validaciones intermedias que no cambian el estado, ya que el State modela la fase general del ciclo de vida del documento, no quién lo revisó.
+
+**Esquema de clases:**
+
+DocumentState (interfaz) → approve(doc), reject(doc)
+ * DraftState → approve: Borrador → En Revisión 
+ * InReviewState → approve: En Revisión → Aprobado / reject: → Rechazado 
+ * ApprovedState → estado terminal, sin transiciones 
+ * RejectedState → estado terminal, sin transiciones
+
+Document
+* delega approve()/reject() al DocumentState actual
+
+DocumentHandler (abstracta) → setNext(), handle(doc), canHandle(doc), process(doc)
+* AutorHandler → aplica si el doc está en Borrador; transiciona a En Revisión
+* LiderHandler → aplica si el doc está En Revisión; solo valida
+* JuridicoHandler → aplica solo si el doc requiere revisión jurídica; solo valida
+* FinancieroHandler → aplica si el doc está En Revisión; transiciona a Aprobado
+
+
+**Código implementado:** ver `Ejercicio7.java`, `DocumentState.java`, `DraftState.java`, `InReviewState.java`, `ApprovedState.java`, `RejectedState.java`, `Document.java`, `DocumentHandler.java`, `AutorHandler.java`, `LiderHandler.java`, `JuridicoHandler.java`, `FinancieroHandler.java` en `src/main/dosw/semana_4/patrones/ejercicio7/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio7.png)
+
+**Justificación:** Sin Chain of Responsibility, `Document` (o alguna clase orquestadora) tendría que conocer explícitamente todos los tipos de validación posibles y decidir con lógica condicional cuáles aplican a cada documento, mezclando reglas de negocio de distintos departamentos en un solo lugar. Sin State, cada método de `Document` tendría un `switch(estado) { case DRAFT: ... case IN_REVIEW: ... }` repetido, con riesgo de inconsistencias si se olvida actualizar algún caso al agregar un estado nuevo. Combinados: agregar un nuevo tipo de validador (por ejemplo, revisión de cumplimiento) solo requiere crear una clase `ComplianceHandler` y añadirla a la cadena; agregar un nuevo estado del documento solo requiere una nueva implementación de `DocumentState` — ninguno de los dos cambios toca la clase `Document` ni el resto de handlers existentes.
