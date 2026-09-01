@@ -777,3 +777,43 @@ public class Ejercicio15 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio15.png)
 
 **Explicación:** Este ejercicio marca un cambio de nivel de abstracción: ya no se opera directamente sobre `Pokemon`, sino sobre `Entrenador`, una clase que a su vez *contiene* una lista de `Pokemon` (un objeto anidado dentro de otro). Para efectos de este ejercicio puntual esa lista interna no se usa todavía (se deja vacía con `List.of()`), pero la clase ya queda lista para los ejercicios siguientes del Nivel 4 que sí necesitan navegar dentro del equipo de cada entrenador. La lógica en sí reutiliza el mismo patrón que el Ejercicio 4 y el 12: `max()` con un `Comparator.comparingInt()`, esta vez usando `Entrenador::getMedallas` como criterio de comparación. El resultado, envuelto en `Optional<Entrenador>`, se procesa con `ifPresent()` y una lambda de bloque (con llaves `{}`) porque esta vez se necesitan imprimir dos líneas distintas en vez de una sola expresión.
+
+### Ejercicio 16 — Entrenadores Experimentados
+
+Mostrar únicamente los entrenadores que posean más de 5 medallas.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio16 {
+
+    public static void main(String[] args) {
+        List<Entrenador> entrenadores = List.of(
+                new Entrenador(1L, "Ash", 8, List.of()),
+                new Entrenador(2L, "Misty", 5, List.of()),
+                new Entrenador(3L, "Brock", 6, List.of()),
+                new Entrenador(4L, "Gary", 10, List.of()),
+                new Entrenador(5L, "May", 3, List.of()),
+                new Entrenador(6L, "Dawn", 7, List.of())
+        );
+
+        List<Entrenador> experimentados = entrenadores.stream()
+                .filter(e -> e.getMedallas() > 5)
+                .collect(Collectors.toList());
+
+        String resultado = experimentados.stream()
+                .map(e -> e.getNombre() + "(" + e.getMedallas() + ")")
+                .collect(Collectors.joining(", "));
+
+        System.out.println("Entrenadores con > 5 medallas: [" + resultado + "]");
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio16.png)
+
+**Explicación:** Nótese que Misty, con exactamente 5 medallas, queda excluida del resultado — la condición del enunciado es "más de 5", es decir estrictamente mayor (`>`), no "5 o más" (`>=`). Es un detalle fácil de pasar por alto pero importante para que la salida coincida exactamente con la esperada. Al igual que en el Ejercicio 9, se usó `filter()` para obtener primero la lista de objetos `Entrenador` que cumplen la condición, y luego un segundo Stream con `map()` y `Collectors.joining()` únicamente para dar formato de texto al resultado impreso, manteniendo separada la lógica de filtrado de la lógica de presentación.
