@@ -601,3 +601,38 @@ public class Ejercicio11 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio11.png)
 
 **Explicación:** Este ejercicio necesita un dato numérico agregado (un promedio), y para eso Java ofrece los Streams especializados en primitivos (`IntStream`, `LongStream`, `DoubleStream`), que traen operaciones estadísticas listas como `average()`, `sum()`, `min()` y `max()` sin necesidad de escribirlas manualmente con `reduce()`. Para llegar a ese Stream especializado se usó `mapToDouble()` en vez del `map()` normal: mientras `map()` transforma un Stream de objetos en otro Stream de objetos, `mapToDouble()` transforma un Stream de objetos (`Pokemon`) directamente en un `DoubleStream` de valores primitivos, extrayendo el `poderCombate` de cada uno mediante el method reference `Pokemon::getPoderCombate`. Sobre ese `DoubleStream` ya se puede llamar `average()`, que retorna un `OptionalDouble` (no un `double` directo) porque técnicamente el Stream podría estar vacío y no existiría promedio calculable; por eso se usa `.orElse(0)` como valor de respaldo. Finalmente, `System.out.printf` con el formato `%.2f` se usó para mostrar el resultado con exactamente dos decimales, tal como pide la salida esperada del taller (474.17 y no 474.166666...).
+
+### Ejercicio 12 — Campeón Regional
+
+Obtener el Pokémon con mayor poderCombate de toda la lista.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+
+public class Ejercicio12 {
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon(1L, "Pikachu", "Eléctrico", 45, 320, "Kanto", false),
+                new Pokemon(2L, "Mewtwo", "Psíquico", 88, 680, "Kanto", true),
+                new Pokemon(3L, "Dragonite", "Dragón", 82, 530, "Kanto", false),
+                new Pokemon(6L, "Charizard", "Fuego", 78, 610, "Kanto", false)
+        );
+
+        Optional<Pokemon> campeon = pokemones.stream()
+                .max(Comparator.comparingDouble(Pokemon::getPoderCombate));
+
+        campeon.ifPresent(p ->
+                System.out.println("Campeón: " + p.getNombre() + " con PC: " + (int) p.getPoderCombate()));
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio12.png)
+
+**Explicación:** Aunque este ejercicio es muy similar al #4 (Pokémon Alfa), aquí se comparó por `poderCombate` (un `double`) en vez de por `nivel` (un `int`), por eso se usó `Comparator.comparingDouble()` en lugar de `comparingInt()` — cada tipo primitivo tiene su variante especializada del comparador para evitar el costo de autoboxing (convertir el primitivo a su clase envolvente `Double`/`Integer`) que ocurriría si se usara `Comparator.comparing()` genérico. El method reference `Pokemon::getPoderCombate` le indica al comparador qué campo usar para decidir el "mayor" entre dos
