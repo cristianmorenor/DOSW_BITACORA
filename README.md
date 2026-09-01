@@ -817,3 +817,51 @@ public class Ejercicio16 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio16.png)
 
 **Explicación:** Nótese que Misty, con exactamente 5 medallas, queda excluida del resultado — la condición del enunciado es "más de 5", es decir estrictamente mayor (`>`), no "5 o más" (`>=`). Es un detalle fácil de pasar por alto pero importante para que la salida coincida exactamente con la esperada. Al igual que en el Ejercicio 9, se usó `filter()` para obtener primero la lista de objetos `Entrenador` que cumplen la condición, y luego un segundo Stream con `map()` y `Collectors.joining()` únicamente para dar formato de texto al resultado impreso, manteniendo separada la lógica de filtrado de la lógica de presentación.
+
+### Ejercicio 17 — Equipo Más Poderoso
+
+Calcular cuál entrenador tiene la suma total de poderCombate más alta entre todos sus Pokémon.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+
+public class Ejercicio17 {
+
+    private static double poderTotal(Entrenador e) {
+        return e.getEquipo().stream()
+                .mapToDouble(Pokemon::getPoderCombate)
+                .sum();
+    }
+
+    public static void main(String[] args) {
+        List<Entrenador> entrenadores = List.of(
+                new Entrenador(1L, "Ash", 8, List.of(
+                        new Pokemon(1L, "Pikachu", "Eléctrico", 45, 850, "Kanto", false),
+                        new Pokemon(2L, "Charizard", "Fuego", 78, 1000, "Kanto", false))),
+                new Entrenador(2L, "Gary", 10, List.of(
+                        new Pokemon(3L, "Nidoking", "Veneno", 70, 1140, "Kanto", false),
+                        new Pokemon(4L, "Arcanine", "Fuego", 65, 1200, "Kanto", false))),
+                new Entrenador(3L, "Brock", 6, List.of(
+                        new Pokemon(5L, "Onix", "Roca", 55, 900, "Kanto", false),
+                        new Pokemon(6L, "Geodude", "Roca", 40, 770, "Kanto", false)))
+        );
+
+        Optional<Entrenador> masPoderoso = entrenadores.stream()
+                .max(Comparator.comparingDouble(Ejercicio17::poderTotal));
+
+        masPoderoso.ifPresent(e -> {
+            System.out.println("Entrenador más poderoso: " + e.getNombre());
+            System.out.println("Poder acumulado del equipo: " + (int) poderTotal(e));
+        });
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio17.png)
+
+**Explicación:** Este ejercicio necesitaba comparar entrenadores por un valor que no es un atributo directo de la clase (como sí lo eran las medallas en el Ejercicio 15), sino un cálculo derivado: la suma de `poderCombate` de todos los Pokémon dentro de su equipo. Esto requiere un Stream anidado dentro de otro Stream, ya que por cada `Entrenador` hay que recorrer su lista interna de `Pokemon`. Para evitar calcular esa suma dos veces (una para comparar y otra para imprimir el resultado), se extrajo la lógica a un método auxiliar `poderTotal(Entrenador e)`, que internamente usa `mapToDouble()` sobre `e.getEquipo()` para convertir la lista de Pokémon en un `DoubleStream` de
