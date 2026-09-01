@@ -1131,6 +1131,8 @@ ReportFactory
 
 **Código implementado:** ver `Ejercicio3.java`, `ReportGenerator.java`, `PdfReport.java`, `ExcelReport.java`, `CsvReport.java`, `ReportFactory.java` en `src/main/dosw/semana_4/patrones/ejercicio3/`.
 
+**Ejecuttar clase ejercicio:**
+
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio3.png)
 
 **Justificación:** Sin Template Method, cada tipo de reporte tendría que reimplementar el flujo completo de 4 pasos, duplicando la lógica de obtención y procesamiento de datos (que es idéntica en los tres formatos) y arriesgando que alguien cambie el orden de los pasos por error. Sin Factory Method, el cliente necesitaría un `if/else` o `switch` para decidir qué clase concreta instanciar cada vez que pide un reporte. Combinados, el esqueleto del algoritmo queda protegido (es `final`, no se puede sobreescribir el orden), solo varían los pasos que realmente cambian entre formatos, y agregar un nuevo tipo de reporte (por ejemplo JSON) solo requiere una nueva subclase y un caso más en la Factory — sin tocar el resto del sistema.
@@ -1162,6 +1164,40 @@ Character (interfaz) → getNombre(), attack()
 
 **Código implementado:** ver `Ejercicio4.java`, `Character.java`, `BaseCharacter.java`, `WarriorBuilder.java`, `CharacterDirector.java`, `CharacterDecorator.java`, `ShieldDecorator.java`, `SpeedDecorator.java`, `InvisibilityDecorator.java` en `src/main/dosw/semana_4/patrones/ejercicio4/`.
 
+**Ejecuttar clase ejercicio:**
+
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio4.png)
 
 **Justificación:** Sin Decorator, cada combinación de poderes activos requeriría una subclase distinta — con 5 poderes posibles combinables, eso significa hasta 2⁵ = 32 subclases para cubrir todas las combinaciones. Con Decorator, solo se necesitan 5 wrappers + 1 clase base = 6 clases en total, y se pueden apilar en cualquier orden y cantidad en tiempo de ejecución. Sin Builder, construir un personaje con varios atributos configurables requeriría un constructor con muchos parámetros posicionales (propenso a errores) en vez de una API fluida y legible. Juntos, Builder resuelve "cómo se arma el personaje al inicio" y Decorator resuelve "cómo se potencia durante el juego" — son momentos distintos del ciclo de vida del personaje, y por eso no compiten entre sí.
+
+### Ejercicio 05 — Integración con Sistema Bancario Antiguo
+
+**Caso:** El sistema moderno usa `PaymentProcessor` con métodos modernos. El banco antiguo expone `LegacyBankService` con métodos incompatibles (`executeTransaction`, `verifyBalance` en centavos). Además, usar `LegacyBankService` directamente requiere 8 pasos de inicialización que los desarrolladores no deberían conocer.
+
+**Patrones combinados:** Adapter + Facade
+
+**Rol de cada patrón:**
+- Adapterr (`LegacyBankAdapter`) hace que `LegacyBankService` sea compatible con la interfaz moderna `PaymentProcessor`. Internamente traduce las llamadas: `amount` (pesos, double) → `cents` (centavos, int), y `pay()` → `verifyBalance()` + `executeTransaction()`.
+- Facade (`BankFacade`) expone un único método simple `procesarPago(monto)` que internamente orquesta los 8 pasos de inicialización y uso del banco legacy (o del Adapter). Los desarrolladores solo usan la Facade y nunca conocen los detalles internos.
+
+**Cómo interactúan:** El desarrollador llama `BankFacade.procesarPago(monto)` → la Facade inicializa la conexión y autentica con el banco legacy, prepara el contexto de sesión y valida parámetros → delega al `LegacyBankAdapter`, que traduce el monto al formato legacy (centavos) → `LegacyBankService` verifica saldo y ejecuta la transacción → la Facade registra el comprobante, notifica y cierra la conexión. El desarrollador nunca toca `LegacyBankService` directamente.
+
+**Esquema de clases:**
+
+PaymentProcessor (interfaz moderna) → pay(amount)
+* LegacyBankAdapter implements PaymentProcessor 
+* traduce hacia LegacyBankService (executeTransaction, verifyBalance en centavos)
+
+BankFacade 
+* procesarPago(monto) → orquesta: conexión, autenticación, contexto, validación, 
+* adapter.pay(monto), comprobante, notificación, cierre
+
+
+**Código implementado:** ver `Ejercicio5.java`, `PaymentProcessor.java`, `LegacyBankService.java`, `LegacyBankAdapter.java`, `BankFacade.java` en `src/main/dosw/semana_4/patrones/ejercicio5/`.
+
+**Ejecuttar clase ejercicio:**
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio5.png)
+
+
+**Justificación:** Sin Adapter, el código moderno tendría que conocer directamente los métodos incompatibles del banco legacy (`executeTransaction`, saldos en centavos), acoplando toda la aplicación a los detalles de un sistema que además puede cambiar o ser reemplazado en el futuro. Sin Facade, cada desarrollador que necesite procesar un pago tendría que repetir manualmente los 8 pasos de inicialización, autenticación y cierre de conexión, con alto riesgo de olvidar alguno o hacerlo en el orden incorrecto. Ambos patrones son complementarios, no excluyentes: Adapter resuelve "hablar el idioma del otro sistema", y Facade resuelve "no me cuentes todo, dame lo simple" — la Facade internamente usa el Adapter, cada uno en su propia capa de responsabilidad.
