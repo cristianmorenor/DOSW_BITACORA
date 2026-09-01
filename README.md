@@ -224,3 +224,32 @@ public class Ejercicio1 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio1.png)
 
 **Explicación:** Se usó `filter()` con una lambda para quedarnos solo con los Pokémon de tipo Fuego, y `map()` con method reference (`Pokemon::nombre`) para extraer únicamente sus nombres.
+
+### Ejercicio 02 — Pokédex Gritona
+
+Transformar todos los nombres de Pokémon a mayúsculas.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio2 {
+
+    public static void main(String[] args) {
+        List<String> pokemones = List.of("Pikachu", "Charmander", "Squirtle", "Bulbasaur");
+
+        List<String> pokedexGritona = pokemones.stream()
+                .map(String::toUpperCase)
+                .collect(Collectors.toList());
+
+        System.out.println(pokedexGritona);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio2.png)
+
+**Explicación:** Se usó `map()` con method reference (`String::toUpperCase`) para transformar cada nombre a mayúsculas de forma simple y directa.
