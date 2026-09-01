@@ -906,3 +906,61 @@ public class Ejercicio18 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio18.png)
 
 **Explicación:** Se usó `sorted()` con `Comparator.comparingDouble(Pokemon::getPoderCombate).reversed()` para ordenar de mayor a menor poder de combate, y `limit(5)` para quedarnos solo con los cinco primeros — tal como sugiere el hint del taller. El reto adicional era numerar el ranking (#1, #2...) sin usar un ciclo `for` tradicional ni una variable contador externa, ya que eso violaría la regla de "solo Streams y Lambdas". La solución fue usar `IntStream.rangeClosed(1, top5.size())`, que genera un Stream de números del 1 al 5 (los puestos del ranking), y con `mapToObj()` se transforma cada número de puesto en la línea de texto correspondiente, accediendo al Pokémon de esa posición con `top5.get(i - 1)` (restando 1 porque las listas empiezan en índice 0, pero el ranking empieza en 1). Finalmente `forEach(System.out::println)` imprime cada línea ya construida.
+
+### Ejercicio 19 — Top 3 Entrenadores
+
+Generar un ranking de los 3 mejores entrenadores considerando: 1° más medallas, 2° mayor poder acumulado, 3° orden alfabético como criterio de desempate.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.IntStream;
+
+public class Ejercicio19 {
+
+    private static double poderTotal(Entrenador e) {
+        return e.getEquipo().stream()
+                .mapToDouble(Pokemon::getPoderCombate)
+                .sum();
+    }
+
+    public static void main(String[] args) {
+        List<Entrenador> entrenadores = List.of(
+                new Entrenador(1L, "Gary", 10, List.of(
+                        new Pokemon(1L, "Nidoking", "Veneno", 70, 1140, "Kanto", false),
+                        new Pokemon(2L, "Arcanine", "Fuego", 65, 1200, "Kanto", false))),
+                new Entrenador(2L, "Ash", 8, List.of(
+                        new Pokemon(3L, "Pikachu", "Eléctrico", 45, 850, "Kanto", false),
+                        new Pokemon(4L, "Charizard", "Fuego", 78, 1000, "Kanto", false))),
+                new Entrenador(3L, "Dawn", 7, List.of(
+                        new Pokemon(5L, "Piplup", "Agua", 30, 1050, "Sinnoh", false),
+                        new Pokemon(6L, "Buneary", "Normal", 28, 1050, "Sinnoh", false))),
+                new Entrenador(4L, "Brock", 6, List.of(
+                        new Pokemon(7L, "Onix", "Roca", 55, 900, "Kanto", false),
+                        new Pokemon(8L, "Geodude", "Roca", 40, 770, "Kanto", false)))
+        );
+
+        Comparator<Entrenador> ranking = Comparator
+                .comparingInt(Entrenador::getMedallas).reversed()
+                .thenComparing(Comparator.comparingDouble(Ejercicio19::poderTotal).reversed())
+                .thenComparing(Entrenador::getNombre);
+
+        List<Entrenador> top3 = entrenadores.stream()
+                .sorted(ranking)
+                .limit(3)
+                .toList();
+
+        IntStream.range(0, top3.size())
+                .mapToObj(i -> "#" + (i + 1) + " " + top3.get(i).getNombre()
+                        + " - " + top3.get(i).getMedallas() + " medallas, PC: " + (int) poderTotal(top3.get(i)))
+                .forEach(System.out::println);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio19.png)
+
+**Explicación:** Este ejercicio pide un ranking con **tres niveles de criterio de desempate**, el caso de uso exacto para `Comparator.thenComparing()`: encadena comparadores donde el segundo solo se aplica si el primero considera dos elementos "empatados", y el tercero solo si los dos anteriores empatan también. Se construyó así: `comparingInt(Entrenador::getMedallas).reversed()` (más medallas primero), `.thenComparing(comparingDouble(Ejercicio19::poderTotal).reversed())` (en empate de medallas, gana mayor poder acumulado del equipo, reutilizando el método auxiliar `poderTotal()` del Ejercicio 17), y
