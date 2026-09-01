@@ -1068,3 +1068,37 @@ Checkout
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio1.png)
 
 **Justificación:** Sin esta combinación, `Checkout` tendría que conocer directamente todas las clases concretas de pago y decidir con `if/else` o `switch` según el país cuál instanciar — mezclando la lógica de "qué país es" con la de "cómo se procesa cada pago". Separando estas dos responsabilidades con Strategy (el algoritmo de pago) y Factory Method (la construcción según contexto), se puede agregar un nuevo medio de pago o un nuevo país sin modificar `Checkout` en absoluto, cumpliendo el principio Open/Closed.
+
+### Ejercicio 02 — Sistema de Notificaciones Multicanal
+
+**Caso:** Cuando un pedido cambia de estado (pendiente → enviado → entregado), el sistema notifica por correo, SMS, WhatsApp y push. No todos los usuarios tienen activos los mismos canales. Cada canal tiene su propia forma de construir y formatear el mensaje.
+
+**Patrones combinados:** Observer + Factory Method
+
+**Rol de cada patrón:**
+- *Observer* desacopla el `Pedido` (el Subject) de sus canales de notificación. `EmailNotifier`, `SmsNotifier` y `PushNotifier` son Observers que se suscriben al pedido. Agregar un canal nuevo no requiere modificar la clase `Pedido`.
+- *Factory Method* crea el mensaje correcto para cada canal: `EmailMessageFactory` genera HTML, `SmsMessageFactory` genera texto plano (recortado a 160 caracteres), `PushMessageFactory` genera un payload JSON.
+
+**Cómo interactúan:** Cuando `Pedido` cambia de estado, notifica a todos sus Observers activos llamando a `notify(event)`. Cada Observer, al recibir el evento, usa su propia `MessageFactory` internamente para construir el mensaje con el formato adecuado a su canal, y luego lo envía. El `Pedido` nunca sabe cómo se construye o envía cada mensaje — solo avisa que algo cambió.
+
+**Esquema de clases:**
+
+NotificationObserver (interfaz)
+* EmailNotifier usa EmailMessageFactory 
+* SmsNotifier usa SmsMessageFactory 
+* PushNotifier  usa PushMessageFactory
+
+MessageFactory (interfaz)
+* EmailMessageFactory construye Message en HTML 
+* SmsMessageFactory  construye Message en texto plano (máx 160 chars)
+* PushMessageFactory construye Message en JSON
+
+Pedido (Subject)
+* mantiene lista de NotificationObserver y los notifica al cambiar de estado
+
+
+**Código implementado:** ver `Ejercicio2.java`, `Pedido.java`, `OrderEvent.java`, `Message.java`, `NotificationObserver.java`, `EmailNotifier.java`, `SmsNotifier.java`, `PushNotifier.java`, `MessageFactory.java`, `EmailMessageFactory.java`, `SmsMessageFactory.java`, `PushMessageFactory.java` en `src/main/dosw/semana_4/patrones/ejercicio2/`.
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio2.png)
+
+**Justificación:** Sin Observer, el `Pedido` tendría que conocer explícitamente cada canal y llamarlos uno por uno con lógica condicional según qué canales tiene activo el usuario — un cambio de acoplamiento fuerte. Sin Factory Method, cada Notifier tendría que construir su propio mensaje con lógica de formateo dispersa y duplicada dentro de sí mismo. Separando ambas responsabilidades, agregar un nuevo canal (por ejemplo WhatsApp) solo implica crear un `WhatsappNotifier` + `WhatsappMessageFactory` y suscribirlo al pedido — sin tocar ninguna clase existente.
