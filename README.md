@@ -529,3 +529,39 @@ public class Ejercicio9 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio9.png)
 
 **Explicación:** Desde este ejercicio en adelante se trabaja con objetos complejos en vez de listas simples de tipos primitivos. Primero se creó la clase `Pokemon` con sus siete atributos y getters, siguiendo exactamente la especificación del taller. Luego, sobre la lista de instancias de `Pokemon`, se usó `filter()` con una lambda que evalúa `p.getPoderCombate() > 500` para quedarnos únicamente con los Pokémon cuyo poder de combate supera los 500 puntos. Como el resultado de ese filtro sigue siendo una lista de objetos `Pokemon` (y no de `String`), se hizo un segundo paso con `map()` para transformar cada objeto en una representación de texto legible (`nombre(poderCombate)`), y finalmente `Collectors.joining(", ")` para unir esos textos en un solo resultado separado por comas, replicando el formato de salida esperado por el taller. Esta separación en dos streams (uno para filtrar objetos, otro para darles formato de texto) es un patrón común cuando se necesita tanto la colección de objetos como una presentación distinta de esos datos.
+
+### Ejercicio 10 — Pokédex Compacta
+
+Generar una lista que contenga únicamente los nombres de todos los Pokémon del equipo.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio10 {
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon(1L, "Pikachu", "Eléctrico", 45, 320, "Kanto", false),
+                new Pokemon(2L, "Mewtwo", "Psíquico", 88, 680, "Kanto", true),
+                new Pokemon(3L, "Dragonite", "Dragón", 82, 530, "Kanto", false),
+                new Pokemon(4L, "Squirtle", "Agua", 38, 210, "Kanto", false),
+                new Pokemon(5L, "Gengar", "Fantasma", 65, 495, "Kanto", false),
+                new Pokemon(6L, "Charizard", "Fuego", 78, 610, "Kanto", false)
+        );
+
+        List<String> nombres = pokemones.stream()
+                .map(Pokemon::getNombre)
+                .collect(Collectors.toList());
+
+        System.out.println(nombres);
+    }
+}
+```
+
+**Captura de ejecución:** ![img_5.png](img_5.png)
+
+**Explicación:** Este ejercicio es un caso directo de transformación de tipo dentro de un Stream: se parte de una `List<Pokemon>` (objetos complejos con siete atributos cada uno) y se necesita llegar a una `List<String>` que contenga solo un dato puntual de cada objeto. Para eso se usa `map()`, cuya función es aplicar una transformación a cada elemento del Stream sin alterar la cantidad de elementos ni el orden original. Como transformación se usó el method reference `Pokemon::getNombre`, equivalente a escribir la lambda `p -> p.getNombre()`, pero más compacto y legible, ya que simplemente delega la llamada al getter correspondiente de cada objeto. El resultado de `map()` sigue siendo un Stream, por lo que se cierra con `collect(Collectors.toList())` para materializarlo de nuevo en una lista concreta que se pueda imprimir. Este patrón (`map()` + `getX()`) es la base de casi todas las "proyecciones" de datos que se piden más adelante en el taller, donde se necesita extraer un subconjunto de información de una colección de objetos más ricos.
