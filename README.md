@@ -865,3 +865,44 @@ public class Ejercicio17 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio17.png)
 
 **Explicación:** Este ejercicio necesitaba comparar entrenadores por un valor que no es un atributo directo de la clase (como sí lo eran las medallas en el Ejercicio 15), sino un cálculo derivado: la suma de `poderCombate` de todos los Pokémon dentro de su equipo. Esto requiere un Stream anidado dentro de otro Stream, ya que por cada `Entrenador` hay que recorrer su lista interna de `Pokemon`. Para evitar calcular esa suma dos veces (una para comparar y otra para imprimir el resultado), se extrajo la lógica a un método auxiliar `poderTotal(Entrenador e)`, que internamente usa `mapToDouble()` sobre `e.getEquipo()` para convertir la lista de Pokémon en un `DoubleStream` de
+
+
+### Ejercicio 18 — Top 5 Pokémon Más Fuertes
+
+Generar un ranking de los cinco Pokémon con mayor poderCombate de toda la Pokédex.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.IntStream;
+
+public class Ejercicio18 {
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon(1L, "Pikachu", "Eléctrico", 45, 320, "Kanto", false),
+                new Pokemon(2L, "Mewtwo", "Psíquico", 88, 680, "Kanto", true),
+                new Pokemon(3L, "Dragonite", "Dragón", 82, 530, "Kanto", false),
+                new Pokemon(4L, "Squirtle", "Agua", 38, 210, "Kanto", false),
+                new Pokemon(5L, "Gengar", "Fantasma", 65, 495, "Kanto", false),
+                new Pokemon(6L, "Charizard", "Fuego", 78, 610, "Kanto", false)
+        );
+
+        List<Pokemon> top5 = pokemones.stream()
+                .sorted(Comparator.comparingDouble(Pokemon::getPoderCombate).reversed())
+                .limit(5)
+                .toList();
+
+        IntStream.rangeClosed(1, top5.size())
+                .mapToObj(i -> "#" + i + " " + top5.get(i - 1).getNombre() + " - PC: " + (int) top5.get(i - 1).getPoderCombate())
+                .forEach(System.out::println);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio18.png)
+
+**Explicación:** Se usó `sorted()` con `Comparator.comparingDouble(Pokemon::getPoderCombate).reversed()` para ordenar de mayor a menor poder de combate, y `limit(5)` para quedarnos solo con los cinco primeros — tal como sugiere el hint del taller. El reto adicional era numerar el ranking (#1, #2...) sin usar un ciclo `for` tradicional ni una variable contador externa, ya que eso violaría la regla de "solo Streams y Lambdas". La solución fue usar `IntStream.rangeClosed(1, top5.size())`, que genera un Stream de números del 1 al 5 (los puestos del ranking), y con `mapToObj()` se transforma cada número de puesto en la línea de texto correspondiente, accediendo al Pokémon de esa posición con `top5.get(i - 1)` (restando 1 porque las listas empiezan en índice 0, pero el ranking empieza en 1). Finalmente `forEach(System.out::println)` imprime cada línea ya construida.
