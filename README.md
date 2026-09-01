@@ -359,3 +359,32 @@ public class Ejercicio5 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio5.png)
 
 **Explicación:** Se usó `filter()` para quedarnos con los Pokémon de nivel superior a 80, `size()` para contarlos y `Collectors.joining()` para mostrar sus nombres separados por coma.
+
+### Ejercicio 06 — Pokédex Sin Duplicados
+
+Dada una lista de Pokémon con elementos repetidos, generar una nueva colección donde cada Pokémon aparezca una sola vez.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio6 {
+
+    public static void main(String[] args) {
+        List<String> pokemones = List.of("Pikachu", "Charmander", "Pikachu", "Squirtle", "Charmander", "Mewtwo");
+
+        List<String> sinDuplicados = pokemones.stream()
+                .distinct()
+                .collect(Collectors.toList());
+
+        System.out.println(sinDuplicados);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio6.png)
+
+**Explicación:** Se usó `distinct()` para eliminar los elementos repetidos del Stream, conservando el orden de primera aparición.
