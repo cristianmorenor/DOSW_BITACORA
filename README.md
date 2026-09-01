@@ -174,6 +174,6 @@ public class Ejercicio5 {
 }
 ```
 
-**Captura de ejecución:** ![img_4.png](img_4.png)
+**Captura de ejecución:** ![](evidencias/ejercicio5.png)
 
 **Explicación:** Se usó `peek()` para imprimir cada transacción a medida que se procesa, y `anyMatch()` para verificar si existe al menos una no aprobada. Como `anyMatch()` hace corto circuito, deja de evaluar transacciones apenas encuentra una que cumple la condición (por eso T4 no se llegó a procesar). El lote se considera válido solo si no hay ninguna no aprobada.
