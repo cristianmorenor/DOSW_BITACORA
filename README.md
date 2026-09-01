@@ -456,3 +456,76 @@ public class Ejercicio8 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio8.png)
 
 **Explicación:** Se usó `filter()` con method reference (`Pokemon::puedeEvolucionar`) para quedarnos solo con los Pokémon listos para evolucionar, y `map()` para extraer sus nombres.
+
+### Ejercicio 09 — Equipo Élite
+
+A partir del Nivel 3 se trabaja con la clase `Pokemon` (id, nombre, tipo, nivel, poderCombate, region, legendario). Mostrar únicamente los Pokémon cuyo poderCombate sea superior a 500.
+
+**Clase Pokemon (reutilizada desde este ejercicio en adelante):**
+```java
+package dosw.semana_2.pokemon;
+
+public class Pokemon {
+    private Long id;
+    private String nombre;
+    private String tipo;
+    private int nivel;
+    private double poderCombate;
+    private String region;
+    private boolean legendario;
+
+    public Pokemon(Long id, String nombre, String tipo, int nivel, double poderCombate, String region, boolean legendario) {
+        this.id = id;
+        this.nombre = nombre;
+        this.tipo = tipo;
+        this.nivel = nivel;
+        this.poderCombate = poderCombate;
+        this.region = region;
+        this.legendario = legendario;
+    }
+
+    public Long getId() { return id; }
+    public String getNombre() { return nombre; }
+    public String getTipo() { return tipo; }
+    public int getNivel() { return nivel; }
+    public double getPoderCombate() { return poderCombate; }
+    public String getRegion() { return region; }
+    public boolean isLegendario() { return legendario; }
+}
+```
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio9 {
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon(1L, "Pikachu", "Eléctrico", 45, 320, "Kanto", false),
+                new Pokemon(2L, "Mewtwo", "Psíquico", 88, 680, "Kanto", true),
+                new Pokemon(3L, "Dragonite", "Dragón", 82, 530, "Kanto", false),
+                new Pokemon(4L, "Squirtle", "Agua", 38, 210, "Kanto", false),
+                new Pokemon(5L, "Gengar", "Fantasma", 65, 495, "Kanto", false),
+                new Pokemon(6L, "Charizard", "Fuego", 78, 610, "Kanto", false)
+        );
+
+        List<Pokemon> equipoElite = pokemones.stream()
+                .filter(p -> p.getPoderCombate() > 500)
+                .collect(Collectors.toList());
+
+        String resultado = equipoElite.stream()
+                .map(p -> p.getNombre() + "(" + (int) p.getPoderCombate() + ")")
+                .collect(Collectors.joining(", "));
+
+        System.out.println("Equipo Élite (PC > 500): [" + resultado + "]");
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio9.png)
+
+**Explicación:** Desde este ejercicio en adelante se trabaja con objetos complejos en vez de listas simples de tipos primitivos. Primero se creó la clase `Pokemon` con sus siete atributos y getters, siguiendo exactamente la especificación del taller. Luego, sobre la lista de instancias de `Pokemon`, se usó `filter()` con una lambda que evalúa `p.getPoderCombate() > 500` para quedarnos únicamente con los Pokémon cuyo poder de combate supera los 500 puntos. Como el resultado de ese filtro sigue siendo una lista de objetos `Pokemon` (y no de `String`), se hizo un segundo paso con `map()` para transformar cada objeto en una representación de texto legible (`nombre(poderCombate)`), y finalmente `Collectors.joining(", ")` para unir esos textos en un solo resultado separado por comas, replicando el formato de salida esperado por el taller. Esta separación en dos streams (uno para filtrar objetos, otro para darles formato de texto) es un patrón común cuando se necesita tanto la colección de objetos como una presentación distinta de esos datos.
