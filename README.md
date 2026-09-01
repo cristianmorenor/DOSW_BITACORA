@@ -388,3 +388,32 @@ public class Ejercicio6 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio6.png)
 
 **Explicación:** Se usó `distinct()` para eliminar los elementos repetidos del Stream, conservando el orden de primera aparición.
+
+### Ejercicio 07 — Orden del Profesor Oak
+
+El Profesor Oak quiere su Pokédex organizada. Ordenar alfabéticamente los nombres de los Pokémon.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio7 {
+
+    public static void main(String[] args) {
+        List<String> pokemones = List.of("Squirtle", "Pikachu", "Mewtwo", "Bulbasaur", "Charmander", "Abra");
+
+        List<String> ordenados = pokemones.stream()
+                .sorted()
+                .collect(Collectors.toList());
+
+        System.out.println(ordenados);
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio7.png)
+
+**Explicación:** Se usó `sorted()` sin comparador personalizado, aprovechando el orden natural alfabético de los `String`.
