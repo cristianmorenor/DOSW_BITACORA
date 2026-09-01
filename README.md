@@ -1277,3 +1277,38 @@ DocumentHandler (abstracta) → setNext(), handle(doc), canHandle(doc), process(
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio7.png)
 
 **Justificación:** Sin Chain of Responsibility, `Document` (o alguna clase orquestadora) tendría que conocer explícitamente todos los tipos de validación posibles y decidir con lógica condicional cuáles aplican a cada documento, mezclando reglas de negocio de distintos departamentos en un solo lugar. Sin State, cada método de `Document` tendría un `switch(estado) { case DRAFT: ... case IN_REVIEW: ... }` repetido, con riesgo de inconsistencias si se olvida actualizar algún caso al agregar un estado nuevo. Combinados: agregar un nuevo tipo de validador (por ejemplo, revisión de cumplimiento) solo requiere crear una clase `ComplianceHandler` y añadirla a la cadena; agregar un nuevo estado del documento solo requiere una nueva implementación de `DocumentState` — ninguno de los dos cambios toca la clase `Document` ni el resto de handlers existentes.
+
+
+### Ejercicio 08 — Sistema de Pedidos en Restaurante
+
+**Caso:** El cliente construye una hamburguesa eligiendo ingredientes, tamaño, tipo de pan, acompañamientos y extras. Después de confirmado el pedido, el sistema debe notificar a cocina (preparar), a facturación (generar cuenta) y al domiciliario (preparar ruta) sin que el pedido los conozca directamente.
+
+**Patrones combinados:** Builder + Observer
+
+**Rol de cada patrón:**
+- Builder (`OrderBuilder`) construye el pedido personalizado paso a paso mediante una API fluida (`setSize()`, `setMeat()`, `addTopping()`, `addSide()`). El pedido resultante (`Order`) es inmutable una vez construido (`build()` valida que los campos obligatorios estén presentes antes de crear el objeto). Evita el constructor caótico con todos los ingredientes como parámetros posicionales.
+- Observer (`KitchenService`, `BillingService`, `DeliveryService`) notifica a los subsistemas cuando el pedido se confirma. El `Order` solo hace `confirm()` — no sabe a quién avisar ni qué hace cada suscriptor con esa información.
+
+**Cómo interactúan:** El cliente configura el pedido con `OrderBuilder` → llama `build()`, que retorna un `Order` inmutable (con listas de toppings y sides ya copiadas para que no puedan modificarse después) → el sistema suscribe los observers al pedido → llama `order.confirm()` → el `Order` notifica a todos sus Observers, y cada subsistema reacciona de forma independiente: Cocina prepara según los ingredientes, Facturación calcula el total según tamaño y cantidad de acompañamientos, y Domicilio prepara la ruta.
+
+
+**Decisión de diseño:** El PDF menciona que `Order` debe ser "inmutable una vez construido", así que `OrderBuilder.build()` no solo valida los campos obligatorios, sino que además copia las listas de toppings y sides con `List.copyOf()` antes de crear el `Order`. Esto es importante porque si simplemente se pasaran las listas internas del Builder tal cual, alguien podría seguir modificándolas desde fuera después de construido el pedido (por ejemplo, llamando `.add()` sobre la lista original), rompiendo la inmutabilidad que se buscaba garantizar. `List.copyOf()` crea una copia de solo lectura, verdaderamente congelada.
+
+También se decidió que el cálculo del precio (`BillingService`) viva completamente separado de `Order`, aunque técnicamente `Order` tiene toda la información necesaria (tamaño, cantidad de sides) para calcularlo él mismo. Esto es intencional:
+**Esquema de clases:**
+
+OrderBuilder → setSize / setMeat / addTopping / addSide / build()
+* Order (inmutable) → mantiene lista de OrderObserver, notifica al confirmar
+
+OrderObserver (interfaz) → onOrderConfirmed(order)
+ * KitchenService → prepara según ingredientes 
+ * BillingService → calcula el total según tamaño y acompañamientos 
+ * DeliveryService → prepara la ruta de entrega
+
+
+**Código implementado:** ver `Ejercicio8.java`, `Size.java`, `Meat.java`, `Order.java`, `OrderBuilder.java`, `OrderObserver.java`, `KitchenService.java`, `BillingService.java`, `DeliveryService.java` en `src/main/dosw/semana_4/patrones/ejercicio8/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio8.png)
+
+**Justificación:** Sin Builder, crear un pedido con todos sus atributos opcionales requeriría un constructor con muchos parámetros (o varios constructores sobrecargados) difícil de leer y propenso a errores de orden. Sin Observer, `Order` tendría que conocer explícitamente las clases `KitchenService`, `BillingService` y `DeliveryService`, y llamarlas una por una manualmente al confirmarse — acoplando el pedido a la implementación específica de cada subsistema. Combinados, Builder garantiza que el pedido esté completo y válido antes de existir (las invariantes se verifican en `build()`), y Observer garantiza que la confirmación desencadene reacciones en cascada sin acoplamiento. Son momentos distintos del ciclo de vida del pedido: construcción vs. notificación.
