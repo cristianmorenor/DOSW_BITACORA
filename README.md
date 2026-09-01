@@ -1201,3 +1201,38 @@ BankFacade
 
 
 **Justificación:** Sin Adapter, el código moderno tendría que conocer directamente los métodos incompatibles del banco legacy (`executeTransaction`, saldos en centavos), acoplando toda la aplicación a los detalles de un sistema que además puede cambiar o ser reemplazado en el futuro. Sin Facade, cada desarrollador que necesite procesar un pago tendría que repetir manualmente los 8 pasos de inicialización, autenticación y cierre de conexión, con alto riesgo de olvidar alguno o hacerlo en el orden incorrecto. Ambos patrones son complementarios, no excluyentes: Adapter resuelve "hablar el idioma del otro sistema", y Facade resuelve "no me cuentes todo, dame lo simple" — la Facade internamente usa el Adapter, cada uno en su propia capa de responsabilidad.
+
+### Ejercicio 06 — Motor de Recomendaciones
+
+**Caso:** Una plataforma tipo Netflix usa algoritmos de recomendación por género, historial, popularidad y similitud con otros usuarios. El usuario puede cambiar sus preferencias de recomendación en cualquier momento. Cuando esto ocurre, la página principal, las notificaciones y la lista de "sugeridos" deben actualizarse automáticamente.
+
+**Patrones combinados:** Strategy + Observer
+
+**Rol de cada patrón:**
+- Strategy es la que permite intercambiar el algoritmo de recomendación en tiempo de ejecución. `GenreStrategy`, `HistoryStrategy` y `PopularityStrategy` implementan `RecommendationAlgorithm`. El motor cambia de algoritmo sin reiniciar la aplicación.
+- Observer notifica automáticamente a todos los componentes cuando cambian las preferencias. `HomePageComponent`, `NotificationService` y `SuggestedListComponent` son Observers del evento "preferencias cambiadas".
+
+**Cómo interactúan:** El `UserProfile` (Subject) mantiene el algoritmo Strategy actual. Cuando el usuario cambia sus preferencias, se le asigna una nueva `RecommendationAlgorithm`, se generan las nuevas recomendaciones con ella, y se notifica a todos los Observers activos pasándoles esas recomendaciones ya calculadas. Cada Observer reacciona actualizando su propia parte de la interfaz, sin necesidad de que la UI haga polling constante preguntando si algo cambió.
+
+**Esquema de clases:**
+
+RecommendationAlgorithm (interfaz) → recommend(usuario)
+* GenreStrategy 
+* HistoryStrategy 
+* PopularityStrategy
+
+PreferenceObserver (interfaz) → onPreferenceChanged(usuario, recomendaciones)
+ * HomePageComponent 
+ * SuggestedListComponent 
+ * NotificationService
+
+UserProfile (Subject)
+ * cambiarAlgoritmo(nuevo) → recalcula recomendaciones y notifica a todos los Observers
+
+
+**Código implementado:** ver `Ejercicio6.java`, `RecommendationAlgorithm.java`, `GenreStrategy.java`, `HistoryStrategy.java`, `PopularityStrategy.java`, `PreferenceObserver.java`, `HomePageComponent.java`, `SuggestedListComponent.java`, `NotificationService.java`, `UserProfile.java` en `src/main/dosw/semana_4/patrones/ejercicio6/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio6.png)
+
+**Justificación:** Sin Strategy, cambiar el algoritmo de recomendación implicaría un `if/else` gigante dentro de `UserProfile` evaluando qué tipo de recomendación calcular, mezclando la lógica de cada algoritmo en una sola clase difícil de mantener y extender. Sin Observer, `UserProfile` tendría que conocer explícitamente cada componente de la UI (HomePage, lista de sugeridos, notificaciones) y llamarlos uno por uno manualmente cada vez que cambia algo, generando acoplamiento fuerte. Los dos patrones son ortogonales y se complementan: Strategy responde "cómo recomendar", Observer responde "a quién avisar que cambió el cómo" — cambiar el algoritmo dispara automáticamente el aviso a los componentes que deben re-renderizarse.
