@@ -675,3 +675,42 @@ public class Ejercicio13 {
 
 
 **Explicación:** Este ejercicio introduce `Collectors.groupingBy()`, el recolector encargado de dividir un Stream en subgrupos según una función clasificadora. Aquí la clasificación se hace por `Pokemon::getTipo`, así que el resultado final es un `Map<String, List<Pokemon>>` donde cada clave es un tipo (Agua, Fuego, Planta...) y cada valor la lista de Pokémon de ese tipo. Sin embargo, la salida esperada solo pide los *nombres*, no los objetos completos — por eso se usó la forma de dos argumentos de `groupingBy()`, donde el segundo argumento es un `Collector` "downstream" que se aplica dentro de cada grupo. En este caso se usó `Collectors.mapping(Pokemon::getNombre, Collectors.toList())`, que transforma cada elemento del grupo con `getNombre()` antes de coleccionarlo en una lista, evitando tener que hacer un segundo `map()` por separado después de agrupar. Finalmente se recorrió el `Map` resultante con `forEach()` para imprimir cada tipo junto a su lista de nombres.
+
+### Ejercicio 14 — Organizar por Región
+
+Agrupar los Pokémon según su región de origen.
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class Ejercicio14 {
+
+    public static void main(String[] args) {
+        List<Pokemon> pokemones = List.of(
+                new Pokemon(1L, "Pikachu", "Eléctrico", 45, 320, "Kanto", false),
+                new Pokemon(2L, "Chikorita", "Planta", 20, 200, "Johto", false),
+                new Pokemon(3L, "Torchic", "Fuego", 22, 210, "Hoenn", false),
+                new Pokemon(4L, "Piplup", "Agua", 18, 190, "Sinnoh", false),
+                new Pokemon(5L, "Charmander", "Fuego", 25, 250, "Kanto", false),
+                new Pokemon(6L, "Totodile", "Agua", 21, 205, "Johto", false)
+        );
+
+        Map<String, List<String>> porRegion = pokemones.stream()
+                .collect(Collectors.groupingBy(
+                        Pokemon::getRegion,
+                        Collectors.mapping(Pokemon::getNombre, Collectors.toList())
+                ));
+
+        porRegion.forEach((region, nombres) -> System.out.println(region + ": " + nombres));
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio14.png)
+
+**Explicación:** Este ejercicio es estructuralmente idéntico al #13, solo que la agrupación se hace por región en vez de por tipo — lo cual demuestra la flexibilidad de `groupingBy()`: basta con cambiar la función clasificadora (`Pokemon::getRegion` en vez de `Pokemon::getTipo`) para reorganizar completamente los datos según otro criterio, sin tocar el resto de la lógica. Se mantuvo el mismo patrón de `groupingBy()` con `Collectors.mapping()` como downstream collector, para que cada grupo contenga directamente los nombres (`String`) en vez de los objetos `Pokemon` completos, que es lo que pide la salida esperada.
