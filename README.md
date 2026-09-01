@@ -1351,3 +1351,40 @@ Validator (abstracta) → setNext(), validate(credentials), check(credentials)
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio9.png)
 
 **Justificación:** Sin Strategy, `AuthService` tendría que implementar los 5 mecanismos de autenticación directamente con un `switch` gigante mezclando lógica de contraseñas, OAuth y biometría en una sola clase. Sin Chain of Responsibility, todas las validaciones de seguridad (credenciales, permisos, ubicación, horario) tendrían que anidarse en `if` sucesivos dentro de un solo método, dificultando agregar o reordenar validaciones. Combinados, agregar un sexto mecanismo de autenticación (por ejemplo Microsoft o token empresarial) solo requiere una nueva clase `AuthStrategy`, y agregar una quinta validación de seguridad solo requiere una nueva clase `Validator` insertada en la cadena — ninguno de los dos patrones interfiere con el otro, porque operan en fases distintas del flujo: autenticación (quién eres) y autorización (qué puedes hacer).
+
+### Ejercicio 10 — Aplicación de Edición de Imágenes
+
+**Caso:** La app permite aplicar filtros acumulativos: blanco y negro, sepia, brillo, contraste y reducción de ruido. El usuario puede aplicar varios filtros sobre la misma imagen en cualquier orden. Además, cada acción debe poder deshacerse de manera individual (no solo deshacer la última).
+
+**Patrones combinados:** Decorator + Command
+
+**Rol de cada patrón:**
+- *Decorator* (`GrayscaleDecorator`, `SepiaDecorator`, `BrightnessDecorator`) aplica filtros de forma acumulativa envolviendo la imagen. Se pueden apilar en cualquier orden; agregar un filtro nuevo no modifica los existentes ni la imagen base.
+- *Command* (`ApplyFilterCommand`) encapsula cada operación del usuario como un objeto con `execute()` y `undo()`. El `ImageEditor` mantiene el historial de filtros activos, permitiendo deshacer cualquiera de ellos individualmente.
+
+**Cómo interactúan:** El usuario aplica un filtro → se crea un `ApplyFilterCommand` que se registra en `ImageEditor` como filtro activo → cuando se pide la imagen actual, el editor reconstruye la imagen desde `BaseImage` envolviéndola en orden con cada filtro todavía activo → el usuario deshace un filtro específico → el comando se quita de la lista de activos → la imagen se reconstruye de nuevo, esta vez sin ese filtro, preservando el resto en su orden original.
+
+**Decisión de diseño:** El esquema del PDF sugiere que `undo()` simplemente "quite el último wrapper" (`image = image.getWrapped()`), lo cual funciona perfecto si solo se permite deshacer la acción más reciente — como una pila LIFO clásica. Pero el enunciado pide explícitamente que **cualquier** filtro pueda deshacerse individualmente, sin importar si fue el primero, el del medio o el último en aplicarse. Con Decorators anidados de la forma tradicional (`new A(new B(new C(imagen)))`), remover una capa intermedia sin afectar las demás no es posible sin reconstruir la cadena. Por eso, en vez de que cada `ApplyFilterCommand` guarde una referencia fija a un objeto `Image` ya envuelto, cada comando guarda solo la **función constructora** del decorator (`GrayscaleDecorator::new`) y `ImageEditor` mantiene una lista ordenada de comandos activos, reconstruyendo la imagen final aplicando esa lista sobre `BaseImage` cada vez que se consulta. Así, deshacer un filtro (`sepia.undo()`) simplemente lo quita de la lista, y la imagen se recalcula respetando el orden y presencia de los filtros restantes — logrando el undo individual real que pide el enunciado, sin perder la esencia del Decorator (la imagen base nunca cambia, solo se envuelve).
+
+**Esquema de clases:**
+
+Image (interfaz) → render()
+ * BaseImage → "Imagen original"
+ * ImageDecorator (abstracta, envuelve un Image)
+ * GrayscaleDecorator 
+ * SepiaDecorator 
+ * BrightnessDecorator
+
+ImageCommand (interfaz) → execute(), undo()
+*  ApplyFilterCommand → guarda la función constructora del Decorator, no una instancia fija
+
+ImageEditor
+* mantiene lista ordenada de ApplyFilterCommand activos; reconstruye la imagen bajo demanda
+
+
+**Código implementado:** ver `Ejercicio10.java`, `Image.java`, `BaseImage.java`, `ImageDecorator.java`, `GrayscaleDecorator.java`, `SepiaDecorator.java`, `BrightnessDecorator.java`, `ImageCommand.java`, `ApplyFilterCommand.java`, `ImageEditor.java` en `src/main/dosw/semana_4/patrones/ejercicio10/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio10.png)
+
+**Justificación:** Sin Decorator, cada combinación posible de filtros requeriría una clase distinta (explosión combinatoria: con 5 filtros posibles serían hasta 2⁵ = 32 clases). Sin Command, no habría forma de registrar "qué se hizo" como objetos manipulables — el historial de acciones no existiría como tal, y deshacer requeriría lógica ad-hoc dispersa por la aplicación. Combinados, Command trata cada aplicación de filtro como una unidad reversible e independiente, y Decorator garantiza que la imagen base nunca se modifique directamente, solo se envuelva — la sensación de "capas" que el usuario espera al editar una imagen.
