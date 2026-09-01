@@ -1102,3 +1102,36 @@ Pedido (Subject)
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio2.png)
 
 **Justificación:** Sin Observer, el `Pedido` tendría que conocer explícitamente cada canal y llamarlos uno por uno con lógica condicional según qué canales tiene activo el usuario — un cambio de acoplamiento fuerte. Sin Factory Method, cada Notifier tendría que construir su propio mensaje con lógica de formateo dispersa y duplicada dentro de sí mismo. Separando ambas responsabilidades, agregar un nuevo canal (por ejemplo WhatsApp) solo implica crear un `WhatsappNotifier` + `WhatsappMessageFactory` y suscribirlo al pedido — sin tocar ninguna clase existente.
+
+### Ejercicio 03 — Sistema de Reportes Empresariales
+
+**Caso:** La empresa genera reportes en PDF, Excel y CSV. Todos siguen los mismos 4 pasos: obtener datos → procesar información → aplicar formato → exportar archivo. Pero cada formato implementa "aplicar formato" y "exportar" de forma diferente. Además, el sistema decide dinámicamente qué tipo de reporte crear.
+
+**Patrones combinados:** Template Method + Factory Method
+
+**Rol de cada patrón:**
+- Template Method define en `ReportGenerator` el método final `generate()`, que ejecuta siempre en el mismo orden los 4 pasos: `fetchData()`, `processData()` (comunes a todos los reportes, implementados en la clase base) y `applyFormat()`, `exportFile()` (abstractos, cada subclase decide cómo hacerlos).
+- Factory Method (`ReportFactory`) crea la instancia correcta según el tipo de reporte solicitado (`"PDF"`, `"EXCEL"`, `"CSV"`), sin que el cliente tenga que instanciar `PdfReport`, `ExcelReport` o `CsvReport` directamente.
+
+**Cómo interactúan:** El cliente pide un tipo de reporte a `ReportFactory`, que construye la subclase de `ReportGenerator` correspondiente. El cliente llama `generate()` sobre ese objeto, y el Template Method ejecuta los 4 pasos en orden: obtiene datos crudos, los procesa (transformándolos a mayúsculas, lógica compartida por todos), y delega los dos últimos pasos a la implementación específica de cada subclase, que toma esos mismos datos procesados y los formatea de manera distinta (HTML para PDF, separado por comas para CSV, separado por `|` para Excel) antes de "exportarlos".
+
+**Esquema de clases:**
+
+ReportGenerator (clase abstracta)
+* generate() → método final (Template Method): fetchData → processData → applyFormat → exportFile 
+* fetchData() / processData() → implementados en la base, compartidos 
+* applyFormat() / exportFile() → abstractos 
+* PdfReport → formatea en HTML 
+* ExcelReport → formatea separado por "|"
+* CsvReport → formatea separado por ","
+
+ReportFactory
+* create(tipo) → PdfReport | ExcelReport | CsvReport
+
+
+**Código implementado:** ver `Ejercicio3.java`, `ReportGenerator.java`, `PdfReport.java`, `ExcelReport.java`, `CsvReport.java`, `ReportFactory.java` en `src/main/dosw/semana_4/patrones/ejercicio3/`.
+
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio3.png)
+
+**Justificación:** Sin Template Method, cada tipo de reporte tendría que reimplementar el flujo completo de 4 pasos, duplicando la lógica de obtención y procesamiento de datos (que es idéntica en los tres formatos) y arriesgando que alguien cambie el orden de los pasos por error. Sin Factory Method, el cliente necesitaría un `if/else` o `switch` para decidir qué clase concreta instanciar cada vez que pide un reporte. Combinados, el esqueleto del algoritmo queda protegido (es `final`, no se puede sobreescribir el orden), solo varían los pasos que realmente cambian entre formatos, y agregar un nuevo tipo de reporte (por ejemplo JSON) solo requiere una nueva subclase y un caso más en la Factory — sin tocar el resto del sistema.
+
