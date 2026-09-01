@@ -30,7 +30,7 @@ public class Ejercicio1 {
 }
 ```
 
-**Captura de ejecución:** ![img.png](img.png)
+**Captura de ejecución:** ![](evidencias/ejercicio1.png)
 
 **Explicación:** Se usó `filter()` con una expresión lambda para evaluar dos condiciones (número par y mayor a 10) sobre el Stream de la lista original, obteniendo así únicamente los elementos que cumplen ambas.
 
@@ -61,7 +61,7 @@ public class Ejercicio2 {
 ```
 
 
-**Captura de ejecución:** ![img_1.png](img_1.png)
+**Captura de ejecución:** ![](evidencias/ejercicio2.png)
 
 **Explicación:** Se usó `filter()` para quedarnos con las palabras de más de 4 caracteres, `map()` con method reference (`String::toUpperCase`) para pasarlas a mayúsculas, y `sorted()` para ordenarlas alfabéticamente antes de contar el resultado.
 
@@ -100,7 +100,7 @@ public class Ejercicio3 {
 }
 ```
 
-**Captura de ejecución:** ![img_2.png](img_2.png)
+**Captura de ejecución:** ![](evidencias/ejercicio3.png)
 
 **Explicación:** Se usó `filter()` con method reference (`User::active`) para quedarnos solo con los usuarios activos, `map()` para extraer el nombre (`User::name`) y transformarlo a mayúsculas (`String::toUpperCase`), y `sorted()` para ordenar alfabéticamente el resultado.
 
@@ -137,6 +137,6 @@ public class Ejercicio4 {
 }
 ```
 
-**Captura de ejecución:** ![img_3.png](img_3.png)
+**Captura de ejecución:** ![](evidencias/ejercicio4.png)
 
 **Explicación:** Se usó `filter()` con una lambda para quedarnos únicamente con los usuarios de 18 años o más, y `map()` con method reference (`User::name`) para extraer solo sus nombres.
