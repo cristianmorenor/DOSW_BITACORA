@@ -64,3 +64,43 @@ public class Ejercicio2 {
 **Captura de ejecución:** ![img_1.png](img_1.png)
 
 **Explicación:** Se usó `filter()` para quedarnos con las palabras de más de 4 caracteres, `map()` con method reference (`String::toUpperCase`) para pasarlas a mayúsculas, y `sorted()` para ordenarlas alfabéticamente antes de contar el resultado.
+
+### Ejercicio 03 — Obtener nombres de los Usuarios
+
+Dada una lista de usuarios con los atributos: id, name, age, active. Filtrar únicamente los usuarios activos, obtener una lista con los nombres en mayúscula y ordenada alfabéticamente.
+
+**Código implementado:**
+```java
+package dosw.semana_1.streams;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class Ejercicio3 {
+
+    record User(int id, String name, int age, boolean active) {}
+
+    public static void main(String[] args) {
+        List<User> users = List.of(
+                new User(1, "Carlos", 25, true),
+                new User(2, "Ana", 17, false),
+                new User(3, "Beatriz", 30, true),
+                new User(4, "Diego", 22, false),
+                new User(5, "Elena", 28, true)
+        );
+
+        List<String> sortedUsers = users.stream()
+                .filter(User::active)
+                .map(User::name)
+                .map(String::toUpperCase)
+                .sorted()
+                .collect(Collectors.toList());
+
+        System.out.println(sortedUsers);
+    }
+}
+```
+
+**Captura de ejecución:** ![img_2.png](img_2.png)
+
+**Explicación:** Se usó `filter()` con method reference (`User::active`) para quedarnos solo con los usuarios activos, `map()` para extraer el nombre (`User::name`) y transformarlo a mayúsculas (`String::toUpperCase`), y `sorted()` para ordenar alfabéticamente el resultado.
