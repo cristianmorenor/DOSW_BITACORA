@@ -1312,3 +1312,42 @@ OrderObserver (interfaz) → onOrderConfirmed(order)
 **Captura de ejecución:** ![](evidencias/patrones_ejercicio8.png)
 
 **Justificación:** Sin Builder, crear un pedido con todos sus atributos opcionales requeriría un constructor con muchos parámetros (o varios constructores sobrecargados) difícil de leer y propenso a errores de orden. Sin Observer, `Order` tendría que conocer explícitamente las clases `KitchenService`, `BillingService` y `DeliveryService`, y llamarlas una por una manualmente al confirmarse — acoplando el pedido a la implementación específica de cada subsistema. Combinados, Builder garantiza que el pedido esté completo y válido antes de existir (las invariantes se verifican en `build()`), y Observer garantiza que la confirmación desencadene reacciones en cascada sin acoplamiento. Son momentos distintos del ciclo de vida del pedido: construcción vs. notificación.
+
+### Ejercicio 09 — Sistema de Autenticación Empresarial
+
+**Caso:** La empresa tiene 5 métodos de autenticación: usuario/contraseña, Google, Microsoft, token empresarial y biometría. Según el tipo de usuario, el sistema selecciona el mecanismo correcto. Una vez autenticado, la solicitud pasa por: validación de credenciales, validación de permisos, validación de ubicación y validación de horario laboral.
+
+**Patrones combinados:** Strategy + Chain of Responsibility
+
+**Rol de cada patrón:**
+-  Strategy selecciona el mecanismo de autenticación. `PasswordStrategy`, `GoogleStrategy` y `BiometricStrategy` implementan `AuthStrategy`. `AuthService` recibe el tipo de usuario y elige la estrategia correcta, llamando `authenticate()`.
+- Chain of Responsibility procesa las validaciones posteriores en secuencia: `CredentialValidator` → `PermissionValidator` → `LocationValidator` → `TimeValidator`. Cada uno decide si pasa al siguiente o lanza una `AccessDeniedException` que detiene la cadena.
+
+**Cómo interactúan:** El usuario intenta acceder → `AuthService` selecciona la `AuthStrategy` correcta según su tipo → si la autenticación es exitosa, el resultado pasa por la cadena de validadores → si todos aprueban sin lanzar excepción, se concede acceso; si alguno falla, la excepción interrumpe la cadena inmediatamente. Strategy decide "cómo autentico"; Chain decide "si tengo acceso".
+
+**Decisión de diseño:** A diferencia del Ejercicio 7 (donde la cadena siempre continúa aunque un handler no aplique), aquí sí se usa la variante de Chain of Responsibility más cercana al esquema clásico: cada validador **siempre se ejecuta** (no hay `canHandle()` que decida si aplica), pero cualquiera puede **detener por completo** la cadena lanzando una excepción. Esto tiene sentido porque las 4 validaciones de seguridad (credenciales, permisos, ubicación, horario) no son opcionales según el tipo de solicitud — todas deben cumplirse siempre, y basta con que una falle para negar el acceso. Es una variante de "cadena de validación estricta" (fail-fast), apropiada para un flujo de seguridad, distinta de la "cadena de pipeline configurable" del Ejercicio 7 donde algunas etapas eran opcionales según el tipo de documento.
+
+**Esquema de clases:**
+
+AuthStrategy (interfaz) → authenticate(credentials)
+ * PasswordStrategy 
+ * GoogleStrategy 
+ * BiometricStrategy
+
+AuthService → login(tipoUsuario, credentials) selecciona la Strategy correcta
+
+Validator (abstracta) → setNext(), validate(credentials), check(credentials)
+ * CredentialValidator 
+ * PermissionValidator 
+ * LocationValidator 
+ * TimeValidator
+
+(cualquiera puede lanzar AccessDeniedException y detener la cadena creada)
+
+
+**Código implementado:** ver `Ejercicio9.java`, `Credentials.java`, `AuthResult.java`, `AuthStrategy.java`, `PasswordStrategy.java`, `GoogleStrategy.java`, `BiometricStrategy.java`, `AuthService.java`, `Validator.java`, `CredentialValidator.java`, `PermissionValidator.java`, `LocationValidator.java`, `TimeValidator.java`, `AccessDeniedException.java` en `src/main/dosw/semana_4/patrones/ejercicio9/`.
+
+**Ejecutar clase ejercicio:**
+**Captura de ejecución:** ![](evidencias/patrones_ejercicio9.png)
+
+**Justificación:** Sin Strategy, `AuthService` tendría que implementar los 5 mecanismos de autenticación directamente con un `switch` gigante mezclando lógica de contraseñas, OAuth y biometría en una sola clase. Sin Chain of Responsibility, todas las validaciones de seguridad (credenciales, permisos, ubicación, horario) tendrían que anidarse en `if` sucesivos dentro de un solo método, dificultando agregar o reordenar validaciones. Combinados, agregar un sexto mecanismo de autenticación (por ejemplo Microsoft o token empresarial) solo requiere una nueva clase `AuthStrategy`, y agregar una quinta validación de seguridad solo requiere una nueva clase `Validator` insertada en la cadena — ninguno de los dos patrones interfiere con el otro, porque operan en fases distintas del flujo: autenticación (quién eres) y autorización (qué puedes hacer).
