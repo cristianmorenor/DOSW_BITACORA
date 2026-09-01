@@ -714,3 +714,66 @@ public class Ejercicio14 {
 **Captura de ejecución:** ![](evidencias/pokemon_ejercicio14.png)
 
 **Explicación:** Este ejercicio es estructuralmente idéntico al #13, solo que la agrupación se hace por región en vez de por tipo — lo cual demuestra la flexibilidad de `groupingBy()`: basta con cambiar la función clasificadora (`Pokemon::getRegion` en vez de `Pokemon::getTipo`) para reorganizar completamente los datos según otro criterio, sin tocar el resto de la lógica. Se mantuvo el mismo patrón de `groupingBy()` con `Collectors.mapping()` como downstream collector, para que cada grupo contenga directamente los nombres (`String`) en vez de los objetos `Pokemon` completos, que es lo que pide la salida esperada.
+
+### Ejercicio 15 — Maestro de Gimnasios
+
+A partir del Nivel 4 se trabaja también con la clase `Entrenador` (id, nombre, medallas, List<Pokemon>). Dado un listado de entrenadores con sus medallas, encontrar el entrenador con más medallas.
+
+**Clase Entrenador (reutilizada desde este ejercicio en adelante):**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.List;
+
+public class Entrenador {
+    private Long id;
+    private String nombre;
+    private int medallas;
+    private List<Pokemon> equipo;
+
+    public Entrenador(Long id, String nombre, int medallas, List<Pokemon> equipo) {
+        this.id = id;
+        this.nombre = nombre;
+        this.medallas = medallas;
+        this.equipo = equipo;
+    }
+
+    public Long getId() { return id; }
+    public String getNombre() { return nombre; }
+    public int getMedallas() { return medallas; }
+    public List<Pokemon> getEquipo() { return equipo; }
+}
+```
+
+**Código implementado:**
+```java
+package dosw.semana_2.pokemon;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+
+public class Ejercicio15 {
+
+    public static void main(String[] args) {
+        List<Entrenador> entrenadores = List.of(
+                new Entrenador(1L, "Ash", 8, List.of()),
+                new Entrenador(2L, "Misty", 5, List.of()),
+                new Entrenador(3L, "Brock", 6, List.of()),
+                new Entrenador(4L, "Gary", 10, List.of())
+        );
+
+        Optional<Entrenador> campeon = entrenadores.stream()
+                .max(Comparator.comparingInt(Entrenador::getMedallas));
+
+        campeon.ifPresent(e -> {
+            System.out.println("Campeón de gimnasios: " + e.getNombre());
+            System.out.println("Medallas obtenidas: " + e.getMedallas());
+        });
+    }
+}
+```
+
+**Captura de ejecución:** ![](evidencias/pokemon_ejercicio15.png)
+
+**Explicación:** Este ejercicio marca un cambio de nivel de abstracción: ya no se opera directamente sobre `Pokemon`, sino sobre `Entrenador`, una clase que a su vez *contiene* una lista de `Pokemon` (un objeto anidado dentro de otro). Para efectos de este ejercicio puntual esa lista interna no se usa todavía (se deja vacía con `List.of()`), pero la clase ya queda lista para los ejercicios siguientes del Nivel 4 que sí necesitan navegar dentro del equipo de cada entrenador. La lógica en sí reutiliza el mismo patrón que el Ejercicio 4 y el 12: `max()` con un `Comparator.comparingInt()`, esta vez usando `Entrenador::getMedallas` como criterio de comparación. El resultado, envuelto en `Optional<Entrenador>`, se procesa con `ifPresent()` y una lambda de bloque (con llaves `{}`) porque esta vez se necesitan imprimir dos líneas distintas en vez de una sola expresión.
